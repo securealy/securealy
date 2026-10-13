@@ -1,0 +1,18 @@
+{
+  "name": "securealy",
+  "displayName": "Securealy",
+  "version": "0.1.0",
+  "description": "Grade a freshly launched app the way an attacker and a customer would see it, then fix what fails before strangers find it.",
+  "author": {
+    "name": "Securealy",
+    "url": "https://securealy.com"
+  },
+  "homepage": "https://securealy.com",
+  "repository": "https://github.com/kennyhyder/securealy",
+  "license": "Apache-2.0",
+  "keywords": ["security", "launch", "checklist", "grader", "supabase", "stripe", "vercel", "seo"],
+  "documentationUrl": "https://github.com/kennyhyder/securealy#readme",
+  "supportUrl": "https://github.com/kennyhyder/securealy/issues",
+  "privacyPolicyUrl": "https://securealy.com/privacy",
+  "termsOfServiceUrl": "https://securealy.com/terms"
+}

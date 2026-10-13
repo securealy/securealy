@@ -1,0 +1,25 @@
+{
+  "name": "securealy",
+  "description": "Securealy: grade a freshly launched app the way an attacker and a customer would see it, then fix what fails.",
+  "owner": {
+    "name": "Securealy",
+    "url": "https://securealy.com"
+  },
+  "plugins": [
+    {
+      "name": "securealy",
+      "source": "./plugin",
+      "description": "Launch check skill plus the Securealy MCP server: grade a URL, scan the repo, check Supabase RLS, Stripe webhooks and Vercel env, fetch fixes.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Securealy",
+        "url": "https://securealy.com"
+      },
+      "homepage": "https://securealy.com",
+      "repository": "https://github.com/kennyhyder/securealy",
+      "license": "Apache-2.0",
+      "category": "security",
+      "keywords": ["security", "launch", "checklist", "grader", "supabase", "stripe", "vercel"]
+    }
+  ]
+}
