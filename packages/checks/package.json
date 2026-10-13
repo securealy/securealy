@@ -1,0 +1,17 @@
+{
+  "name": "securealy-checks",
+  "version": "0.1.0",
+  "description": "The Securealy check catalogue (source of truth for every check id)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kennyhyder/securealy.git",
+    "directory": "packages/checks"
+  },
+  "files": [
+    "checks.json"
+  ],
+  "exports": {
+    "./checks.json": "./checks.json"
+  }
+}

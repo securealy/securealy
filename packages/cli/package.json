@@ -1,0 +1,28 @@
+{
+  "name": "securealy",
+  "version": "0.1.0",
+  "description": "Grade a freshly launched app the way an attacker and a customer would see it",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "securealy": "./dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kennyhyder/securealy.git",
+    "directory": "packages/cli"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/bin.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "securealy-core": "0.1.0"
+  }
+}
