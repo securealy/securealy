@@ -1,6 +1,6 @@
 import { createServer as createHttpServer } from 'node:http';
 import type { Server as HttpServer } from 'node:http';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -28,9 +28,31 @@ function fakeResolver(): Resolver {
 let http: HttpServer;
 let base = '';
 const tmp: string[] = [];
+/** Telemetry POSTs the fixture server received, and waiters for the next one. */
+const telemetry: { headers: Record<string, string | string[] | undefined>; body: Record<string, unknown> }[] = [];
+let telemetryWaiters: (() => void)[] = [];
+const nextTelemetry = () => new Promise<void>((r) => telemetryWaiters.push(r));
+const tmpDir = () => {
+  const d = mkdtempSync(join(tmpdir(), 'securealy-mcp-'));
+  tmp.push(d);
+  return d;
+};
 
 beforeAll(async () => {
   http = createHttpServer((req, res) => {
+    if (req.method === 'POST' && req.url === '/api/telemetry') {
+      let raw = '';
+      req.on('data', (c) => (raw += c));
+      req.on('end', () => {
+        telemetry.push({ headers: req.headers, body: JSON.parse(raw) as Record<string, unknown> });
+        res.writeHead(204);
+        res.end();
+        const w = telemetryWaiters;
+        telemetryWaiters = [];
+        for (const r of w) r();
+      });
+      return;
+    }
     const headers = { 'strict-transport-security': 'max-age=31536000', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY' };
     if (req.url === '/') {
       res.writeHead(200, { ...headers, 'content-type': 'text/html; charset=utf-8' });
@@ -70,7 +92,8 @@ function routedFetch(table: Record<string, { status: number; body: string }> = {
 }
 
 async function connect(opts: Parameters<typeof createServer>[0] = {}) {
-  const server = createServer({ fetch: routedFetch(), dns: fakeResolver(), skipDnssec: true, ...opts });
+  // A fresh working directory per server so the run record never lands in the repository.
+  const server = createServer({ fetch: routedFetch(), dns: fakeResolver(), skipDnssec: true, cwd: tmpDir(), env: {}, ...opts });
   const [clientT, serverT] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0.0.0' });
   await server.connect(serverT);
@@ -162,8 +185,7 @@ describe('grade_url', () => {
 
 describe('scan_repo', () => {
   it('gates on folder trust, then runs the three repo checks', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'securealy-mcp-'));
-    tmp.push(dir);
+    const dir = tmpDir();
     writeFileSync(join(dir, '.gitignore'), '.env*\nnode_modules/\n');
     writeFileSync(join(dir, '.env.example'), 'STRIPE_SECRET_KEY=\n');
     writeFileSync(join(dir, 'index.js'), 'const k = process.env.STRIPE_SECRET_KEY;\n');
@@ -303,5 +325,75 @@ describe('summarize', () => {
     expect(s.indexOf('BLOCKERS')).toBeLessThan(s.indexOf('seo:'));
     expect(s).toContain('Stack: host=vercel');
     expect(s).not.toContain('hsts');
+  });
+});
+
+describe('learning record', () => {
+  const history = (cwd: string) => JSON.parse(readFileSync(join(cwd, '.securealy', 'history.json'), 'utf8')) as Record<string, unknown>[];
+
+  it('grade_url appends an entry with the host and no evidence, then reports the change on the next grade', async () => {
+    const cwd = tmpDir();
+    const { client } = await connect({ cwd });
+    const first = await client.callTool({ name: 'grade_url', arguments: { url: base } });
+    expect(first.isError).toBeFalsy();
+    expect(text(first)).not.toContain('Previous grade');
+    const raw = readFileSync(join(cwd, '.securealy', 'history.json'), 'utf8');
+    expect(raw).not.toContain(FIXTURE_SECRET);
+    expect(raw).not.toContain('sk_liv');
+    expect(raw).not.toContain('found in');
+    const [entry] = history(cwd);
+    const structured = first.structuredContent as { id: string; grade: string; score: number; host: string };
+    expect(entry).toMatchObject({ command: 'mcp.grade_url', tier: 'passive', host: structured.host, grade: structured.grade, score: structured.score, id: structured.id });
+    expect(Object.keys(entry ?? {}).sort()).toEqual(['at', 'command', 'engineVersion', 'failed', 'grade', 'host', 'id', 'score', 'summary', 'tier']);
+    expect(entry?.failed).toContain('secrets-in-bundle');
+    expect(existsSync(join(cwd, '.securealy', 'README.md'))).toBe(true);
+
+    const second = await client.callTool({ name: 'grade_url', arguments: { url: base } });
+    const t = text(second);
+    expect(t).toMatch(/\nPrevious grade [A-F] \d+ on \d{4}-\d{2}-\d{2}; no checks changed\n/);
+    expect(t.indexOf('Previous grade')).toBeLessThan(t.indexOf('GradeResult JSON:'));
+    expect(history(cwd).length).toBe(2);
+  });
+
+  it('local tools record without a host, and SECUREALY_NO_HISTORY=1 records nothing', async () => {
+    const cwd = tmpDir();
+    const { client } = await connect({ cwd });
+    await client.callTool({ name: 'check_vercel_env', arguments: { projectId: 'prj_x' } });
+    const [entry] = history(cwd);
+    expect(entry?.command).toBe('mcp.check_vercel_env');
+    expect(entry?.tier).toBe('local');
+    expect(entry).not.toHaveProperty('host');
+
+    const off = tmpDir();
+    const quiet = await connect({ cwd: off, env: { SECUREALY_NO_HISTORY: '1' } });
+    await quiet.client.callTool({ name: 'check_rls', arguments: {} });
+    expect(existsSync(join(off, '.securealy'))).toBe(false);
+  });
+
+  it('telemetry is off by default and sends only the aggregate shape when SECUREALY_TELEMETRY=1', async () => {
+    telemetry.length = 0;
+    const silent = await connect({ cwd: tmpDir(), telemetryEndpoint: `${base}/api/telemetry` });
+    await silent.client.callTool({ name: 'check_rls', arguments: {} });
+    await new Promise((r) => setTimeout(r, 150));
+    expect(telemetry.length).toBe(0);
+
+    const loud = await connect({ cwd: tmpDir(), env: { SECUREALY_TELEMETRY: '1' }, telemetryEndpoint: `${base}/api/telemetry` });
+    const arrived = nextTelemetry();
+    const r = await loud.client.callTool({ name: 'grade_url', arguments: { url: base } });
+    await arrived;
+    expect(telemetry.length).toBe(1);
+    const sent = telemetry[0]!;
+    expect(sent.headers['user-agent']).toMatch(/^securealy-mcp\/\d+\.\d+\.\d+$/);
+    expect(Object.keys(sent.body).sort()).toEqual(['command', 'counts', 'durationMs', 'engine', 'failed', 'grade', 'node', 'requests', 'score', 'stack', 'tier']);
+    const structured = r.structuredContent as { grade: string; score: number; requests: number; summary: Record<string, number> };
+    expect(sent.body).toMatchObject({ command: 'mcp.grade_url', tier: 'passive', grade: structured.grade, score: structured.score, requests: structured.requests });
+    expect(sent.body.counts).toEqual({ pass: structured.summary.pass, fail: structured.summary.fail, warn: structured.summary.warn, skip: structured.summary.skip, error: structured.summary.error, blocker: structured.summary.blocker });
+    expect(Object.keys(sent.body.stack as object).sort()).toEqual(['builder', 'db', 'framework', 'host', 'payments']);
+    expect(sent.body.failed).toContain('secrets-in-bundle');
+    const raw = JSON.stringify(sent.body);
+    expect(raw).not.toContain('127.0.0.1');
+    expect(raw).not.toContain(FIXTURE_SECRET);
+    expect(raw).not.toContain('sk_liv');
+    for (const k of ['url', 'input', 'finalUrl', 'host', 'evidence', 'checks', 'id']) expect(sent.body).not.toHaveProperty(k);
   });
 });

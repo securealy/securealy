@@ -42,12 +42,15 @@ Every later release is a tag:
 npm version 0.2.0 --workspaces --include-workspace-root --no-git-tag-version
 # also bump: plugin/.claude-plugin/plugin.json, plugin/.mcp.json (the securealy-mcp@ pin),
 # .claude-plugin/marketplace.json, server.json (both version fields), packages/action/action.yml (version default),
+# packages/action/README.md and plugin/README.md (the version they quote),
 # plugin/skills/launch-check/SKILL.md and skills/launch-check/SKILL.md (metadata.version)
 npm test            # layout.test.ts fails if any of those disagree
 git commit -am "Release 0.2.0"
 git tag v0.2.0
 git push origin main v0.2.0
 ```
+
+The CLI (`securealy`) and the server (`securealy-mcp`) always carry the tag version. `securealy-checks` and `securealy-core` keep their own version when nothing in them changed (bump only those two workspaces: `npm version 0.2.0 --workspace packages/checks --workspace packages/core --no-git-tag-version`, then update the exact pins in `packages/core`, `packages/cli` and `packages/mcp`). The release workflow publishes a package only when its version equals the tag, so an unchanged engine is never republished. `securealy-mcp` depends on `securealy` at the same version for the shared run record.
 
 ## 2. MCP Registry (`com.securealy/mcp`)
 
@@ -112,9 +115,9 @@ On the **Data handling** step, answer truthfully:
 
 | Question | Answer |
 |---|---|
-| Does the plugin read or store personal data? | No. It reads the URL the user asks to grade and the repository folder the user confirms. It stores nothing. |
-| Does it send data to services other than its declared connectors? | Yes, with disclosure: `grade_url` sends HTTP requests to the URL being graded and DNS, TLS and RDAP lookups for its domain; the verified tier sends the URL and the project token to securealy.com; `fetch_fix` sends a check id to securealy.com; `post_result` sends a result and the token to securealy.com only when the user asks. The local checks send credentials only to Supabase, Stripe and Vercel respectively. Nothing from `scan_repo` leaves the machine. |
-| How long is data kept? | The plugin keeps nothing. Results posted with `post_result` are kept by securealy.com under the user's project until the user deletes them. |
+| Does the plugin read or store personal data? | No. It reads the URL the user asks to grade and the repository folder the user confirms. It stores a local run record (`.securealy/history.json` in the working directory: grade, score, counts, failing check ids and the graded hostname; never evidence or credentials), which `SECUREALY_NO_HISTORY=1` turns off. |
+| Does it send data to services other than its declared connectors? | Yes, with disclosure: `grade_url` sends HTTP requests to the URL being graded and DNS, TLS and RDAP lookups for its domain; the verified tier sends the URL and the project token to securealy.com; `fetch_fix` sends a check id to securealy.com; `post_result` sends a result and the token to securealy.com only when the user asks. The local checks send credentials only to Supabase, Stripe and Vercel respectively. Nothing from `scan_repo` leaves the machine. Only if the user sets `SECUREALY_TELEMETRY=1` (off by default, never prompted) does each run also send an anonymous aggregate (command, grade, counts, stack kinds, failing check ids; no URL, host or evidence) to securealy.com. |
+| How long is data kept? | The plugin keeps the local run record until the user deletes the file. Results posted with `post_result` are kept by securealy.com under the user's project until the user deletes them. |
 | Intended for people under 18? | No. |
 
 On **Compliance**, confirm the contact email and the four acknowledgements, then **Submit for review**. Keep **GitHub push webhook** so each commit to `main` is scanned as a new version. Raise `version` in `plugin/.claude-plugin/plugin.json` with every release.

@@ -1,11 +1,17 @@
 {
   "name": "securealy",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Grade a freshly launched app the way an attacker and a customer would see it",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
     "securealy": "./dist/bin.js"
+  },
+  "exports": {
+    "./record": {
+      "types": "./dist/record.d.ts",
+      "import": "./dist/record.js"
+    }
   },
   "files": [
     "dist"

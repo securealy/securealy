@@ -30,20 +30,26 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run lint
-      - name: Tag matches the package versions
+      - name: Tag matches the CLI and server versions
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          for p in packages/checks packages/core packages/cli packages/mcp; do
+          for p in packages/cli packages/mcp; do
             v=$(node -p "require('./$p/package.json').version")
             if [ "$v" != "$tag" ]; then echo "$p is $v but the tag is $tag" >&2; exit 1; fi
           done
           v=$(node -p "JSON.parse(require('fs').readFileSync('plugin/.mcp.json','utf8')).mcpServers.securealy.args.at(-1)")
           if [ "$v" != "securealy-mcp@$tag" ]; then echo "plugin/.mcp.json pins $v, expected securealy-mcp@$tag" >&2; exit 1; fi
-      - name: Publish securealy-checks
-        run: npm publish --workspace packages/checks --access public
-      - name: Publish securealy-core
-        run: npm publish --workspace packages/core --access public
-      - name: Publish securealy
-        run: npm publish --workspace packages/cli --access public
-      - name: Publish securealy-mcp
-        run: npm publish --workspace packages/mcp --access public
+      # The catalogue and the engine keep their own version when nothing in them
+      # changed; a package is published only when its version is the tag's.
+      - name: Publish the packages at the tag version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for p in packages/checks packages/core packages/cli packages/mcp; do
+            v=$(node -p "require('./$p/package.json').version")
+            if [ "$v" = "$tag" ]; then
+              echo "publishing $p@$v"
+              npm publish --workspace "$p" --access public
+            else
+              echo "skipping $p: version $v is not the tag $tag"
+            fi
+          done

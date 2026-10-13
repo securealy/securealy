@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.2
+
+The learning record. `securealy` and `securealy-mcp` only; `securealy-core` and `securealy-checks` stay at 0.1.1.
+
+- Every `grade`, `local`, `scan-repo`, `check-rls`, `check-stripe` and `check-vercel-env` run, and every `grade_url`, `scan_repo`, `check_rls`, `check_stripe` and `check_vercel_env` call, appends one entry to `.securealy/history.json` in the working directory: time, command, tier, grade, score, counts, failing check ids, result id, engine version, and the hostname for a URL grade. Never evidence, tokens or environment values; the serialised entry is passed through the engine's redactor as well. Newest 200 kept; a README is written beside it once; the folder is created, and an unwritable folder is skipped silently. `--no-history` and `SECUREALY_NO_HISTORY=1` turn it off.
+- `grade` (CLI) and `grade_url` (MCP) print one line against the previous entry for the same host: `Previous grade B 83 on 2026-10-12; 2 checks improved, 1 regressed: not-found-page`.
+- Opt-in telemetry, off by default and never prompted for: with `SECUREALY_TELEMETRY=1`, each of those runs POSTs an aggregate (command, tier, grade, score, duration, requests, counts, engine and Node versions, detected stack kinds, failing check ids) to `https://securealy.com/api/telemetry`. No URL, host, path, evidence or token. Fire and forget, three-second timeout, failures silent. The exact payload is in the README under "What leaves your machine".
+- The launch-check skill reads `.securealy/history.json` first and reports the trend before grading again.
+- `securealy-mcp` depends on `securealy` for the shared record module (`securealy/record`). The CLI user agent now follows the package version.
+- Release workflow publishes only the packages whose version matches the tag, so an unchanged engine is never republished; the layout test checks the exact pins between packages instead of one shared version.
+
 ## 0.1.1
 
 Pre-launch false-positive review of the passive grader, graded against twenty live sites. Every class below is fixed in the engine with a regression test; fixtures regenerated.

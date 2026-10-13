@@ -12,12 +12,26 @@ const read = (p: string) => readFileSync(join(root, p), 'utf8');
 const json = <T>(p: string) => JSON.parse(read(p)) as T;
 
 const version = json<{ version: string }>('package.json').version;
+type Pkg = { version: string; dependencies?: Record<string, string> };
+const semver = /^\d+\.\d+\.\d+$/;
 
 describe('distribution layout', () => {
-  it('every publishable package and the manifests carry the root version', () => {
-    for (const p of ['packages/checks', 'packages/core', 'packages/cli', 'packages/mcp']) {
-      expect(json<{ version: string }>(`${p}/package.json`).version, p).toBe(version);
-    }
+  it('the CLI, the MCP server and the manifests carry the root version; the engine packages pin each other exactly', () => {
+    // The CLI and the server ship on every release. The catalogue and the
+    // engine keep their own version when nothing in them changed, so a release
+    // never republishes an identical securealy-core.
+    const checks = json<Pkg>('packages/checks/package.json');
+    const core = json<Pkg>('packages/core/package.json');
+    const cli = json<Pkg>('packages/cli/package.json');
+    const mcp = json<Pkg>('packages/mcp/package.json');
+    expect(cli.version).toBe(version);
+    expect(mcp.version).toBe(version);
+    expect(core.version).toMatch(semver);
+    expect(checks.version).toBe(core.version);
+    expect(core.dependencies?.['securealy-checks']).toBe(checks.version);
+    expect(cli.dependencies?.['securealy-core']).toBe(core.version);
+    expect(mcp.dependencies?.['securealy-core']).toBe(core.version);
+    expect(mcp.dependencies?.['securealy']).toBe(cli.version);
     expect(json<{ version: string }>('plugin/.claude-plugin/plugin.json').version).toBe(version);
     expect(json<{ plugins: { version: string }[] }>('.claude-plugin/marketplace.json').plugins[0]?.version).toBe(version);
     const server = json<{ version: string; packages: { version: string; identifier: string }[]; name: string }>('server.json');
@@ -36,6 +50,15 @@ describe('distribution layout', () => {
   it('the Action defaults to the CLI version it was released with', () => {
     const action = read('packages/action/action.yml');
     expect(action).toContain(`default: ${version}\n`);
+    expect(read('packages/action/README.md')).toContain(`| \`version\` | \`${version}\` |`);
+    expect(read('plugin/README.md')).toContain(`npx -y securealy-mcp@${version}`);
+  });
+
+  it('the release workflow publishes only the packages whose version matches the tag', () => {
+    const release = read('.github/workflows/release.yml');
+    expect(release).toContain('for p in packages/checks packages/core packages/cli packages/mcp');
+    expect(release).toContain('npm publish --workspace "$p" --access public');
+    expect(release).not.toContain('npm publish --workspace packages/core');
   });
 
   it('the agentskills mirror is identical to the plugin skill and its name matches its folder', () => {

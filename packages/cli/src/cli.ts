@@ -4,6 +4,8 @@ import { parseArgs } from 'node:util';
 import { grade, runLocal, verificationOptions, OptOutError, VerificationError } from 'securealy-core';
 import type { GradeResult } from 'securealy-core';
 import { API_BASE, meetsMinimum, parseGrade, renderReport, summaryLine } from './report.js';
+import { CLI_VERSION, recordRun } from './record.js';
+import type { RunCommand } from './record.js';
 
 const HELP = `securealy: grade a freshly launched app the way an attacker and a customer would see it
 
@@ -22,7 +24,13 @@ Options
   --compact         hide passing and skipped rows in the report
   --min-grade <g>   exit 1 when the grade is below this (default C)
   --no-color        plain output
+  --no-history      do not append this run to .securealy/history.json (or set SECUREALY_NO_HISTORY=1)
   -h, --help        this text
+
+Every run is appended to .securealy/history.json in the current folder (grade, score,
+counts, failing check ids; never evidence or values) so the next run can say what changed.
+Set SECUREALY_TELEMETRY=1 to also send an anonymous aggregate (grade, counts, stack kind,
+failing ids; no URL, no host, no evidence) to securealy.com. Off by default.
 
 Nothing here prints a secret. Every environment variable is trimmed before use and
 only ever sent to the service it belongs to.`;
@@ -35,10 +43,15 @@ const LOCAL_SETS: Record<string, string[]> = {
   local: [],
 };
 
-interface Io {
+export interface Io {
   out(s: string): void;
   err(s: string): void;
   color: boolean;
+  /** Test hooks. Default: process.cwd(), process.env, global fetch, the securealy.com telemetry endpoint. */
+  cwd?: string;
+  env?: Record<string, string | undefined>;
+  fetch?: typeof fetch;
+  telemetryEndpoint?: string;
 }
 
 function defaultIo(noColor: boolean): Io {
@@ -62,6 +75,7 @@ export async function main(argv: string[], io?: Io): Promise<number> {
       'min-grade': { type: 'string' },
       verbose: { type: 'boolean', default: false },
       'no-color': { type: 'boolean', default: false },
+      'no-history': { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
@@ -72,12 +86,17 @@ export async function main(argv: string[], io?: Io): Promise<number> {
     return values.help ? 0 : 1;
   }
   const minGrade = parseGrade(values['min-grade']);
-  const emit = (r: GradeResult): number => {
+  const cwd = o.cwd ?? process.cwd();
+  const env = o.env ?? (process.env as Record<string, string | undefined>);
+  const emit = async (r: GradeResult, ran: RunCommand): Promise<number> => {
+    const rec = recordRun(r, ran, { cwd, env, noHistory: values['no-history'] === true, fetch: o.fetch, telemetryEndpoint: o.telemetryEndpoint, userAgent: `securealy-cli/${CLI_VERSION}` });
     if (values.json) o.out(JSON.stringify(r, null, 2));
     else {
       o.out(renderReport(r, { color: o.color, compact: values.compact === true }));
+      if (rec.comparison) o.out(rec.comparison);
       o.out(summaryLine(r));
     }
+    await rec.telemetry;
     return meetsMinimum(r.grade, minGrade) ? 0 : 1;
   };
 
@@ -91,9 +110,10 @@ export async function main(argv: string[], io?: Io): Promise<number> {
           tier,
           verifyToken: values.token?.trim(),
           bypassToken: values.bypass?.trim(),
+          fetch: o.fetch,
           log: values.verbose ? (line) => o.err(`  ${line}`) : undefined,
         });
-        return emit(r);
+        return await emit(r, 'grade');
       } catch (e) {
         if (e instanceof OptOutError) {
           o.err(e.message);
@@ -118,10 +138,12 @@ export async function main(argv: string[], io?: Io): Promise<number> {
     case 'check-stripe':
     case 'check-vercel-env':
     case 'local': {
-      const cwd = resolve(arg ?? '.');
+      const target = resolve(cwd, arg ?? '.');
       const checks = LOCAL_SETS[command] ?? [];
-      const r = await runLocal({ cwd, checks, log: values.verbose ? (line) => o.err(`  ${line}`) : undefined });
-      return emit(r);
+      const localEnv: Record<string, string> = {};
+      for (const [k, v] of Object.entries(env)) if (typeof v === 'string') localEnv[k] = v;
+      const r = await runLocal({ cwd: target, checks, env: localEnv, fetch: o.fetch, log: values.verbose ? (line) => o.err(`  ${line}`) : undefined });
+      return await emit(r, command);
     }
     case 'post': {
       if (!arg) throw new Error('post needs a result.json path');
@@ -130,9 +152,9 @@ export async function main(argv: string[], io?: Io): Promise<number> {
       const raw = await readFile(resolve(arg), 'utf8');
       const result = JSON.parse(raw) as GradeResult;
       if (result.schema !== 1 || !Array.isArray(result.checks)) throw new Error(`${arg} is not a Securealy GradeResult`);
-      const res = await fetch(`${API_BASE}/api/results`, {
+      const res = await (o.fetch ?? fetch)(`${API_BASE}/api/results`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'user-agent': 'securealy-cli/0.1.1' },
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'user-agent': `securealy-cli/${CLI_VERSION}` },
         body: JSON.stringify(result),
       });
       const text = await res.text();

@@ -3,7 +3,7 @@
   "name": "com.securealy/mcp",
   "title": "Securealy",
   "description": "Grade a URL as an attacker and a customer would see it; scan a repo; check Supabase, Stripe, Vercel.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "websiteUrl": "https://securealy.com",
   "repository": {
     "url": "https://github.com/kennyhyder/securealy",
@@ -15,7 +15,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "securealy-mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
@@ -66,6 +66,20 @@
         {
           "name": "VERCEL_PROJECT_ID",
           "description": "Optional. Vercel project id for check_vercel_env.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "SECUREALY_NO_HISTORY",
+          "description": "Optional. Set to 1 to stop the server appending each run (grade, score, counts, failing check ids; never evidence) to .securealy/history.json in its working directory.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "SECUREALY_TELEMETRY",
+          "description": "Optional, off by default. Set to 1 to send an anonymous aggregate of each run (command, grade, counts, stack kind, failing check ids; no URL, host or evidence) to securealy.com.",
           "isRequired": false,
           "isSecret": false,
           "format": "string"

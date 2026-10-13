@@ -55,6 +55,24 @@ npx securealy local                # all of the above
 
 Every environment variable is trimmed before use, sent only to the service it belongs to, and never printed. Evidence is redacted at the source: a found key shows as its first six characters and an ellipsis.
 
+## The learning record
+
+Every `grade`, `local`, `scan-repo`, `check-rls`, `check-stripe` and `check-vercel-env` run (and every `grade_url`, `scan_repo`, `check_rls`, `check_stripe` and `check_vercel_env` call through the MCP server) appends one entry to `.securealy/history.json` in the current working directory:
+
+```json
+{ "at": "2026-10-12T23:00:00Z", "command": "grade", "tier": "passive", "host": "your-app.com",
+  "grade": "B", "score": 83, "summary": { "blocker": 0, "fail": 4, "warn": 3, "pass": 38, "skip": 6, "error": 0 },
+  "id": "g_01J...", "failed": ["hsts", "not-found-page"], "engineVersion": "0.1.1" }
+```
+
+That is the whole entry: ids and numbers. Never evidence strings, never tokens, never environment values; `host` is recorded only for a grade of a URL. The newest 200 entries are kept, and a `README.md` beside the file explains it. The file is safe to commit. The next `grade` of the same host prints one line against the previous entry:
+
+```
+Previous grade B 83 on 2026-10-12; 2 checks improved, 1 regressed: not-found-page
+```
+
+The `grade_url` summary from the MCP server carries the same line, and the launch-check skill reads the file before grading again so it can report the trend. Turn it off with `--no-history` or `SECUREALY_NO_HISTORY=1`. If the working directory is not writable, nothing is written and nothing is said.
+
 ## Verifying ownership
 
 ```
@@ -120,7 +138,19 @@ codex mcp add securealy -- npx -y securealy-mcp
 
 ### What leaves your machine
 
-The passive grade sends requests only to the URL being graded (what a browser would request, at most 25) plus DNS, TLS and RDAP lookups for its domain; nothing goes to Securealy. The verified grade sends the URL and your project token to securealy.com. `fetch_fix` sends a check id to securealy.com. `post_result` sends a result and your token to securealy.com, and only when you ask. The repository scan reads the folder you confirm and sends nothing. The Supabase, Stripe and Vercel checks read their credentials from your environment, send each one only to the service it belongs to, and never print them.
+The passive grade sends requests only to the URL being graded (what a browser would request, at most 25) plus DNS, TLS and RDAP lookups for its domain; nothing goes to Securealy. The verified grade sends the URL and your project token to securealy.com. `fetch_fix` sends a check id to securealy.com. `post_result` sends a result and your token to securealy.com, and only when you ask. The repository scan reads the folder you confirm and sends nothing. The Supabase, Stripe and Vercel checks read their credentials from your environment, send each one only to the service it belongs to, and never print them. The learning record (`.securealy/history.json`) stays on your machine.
+
+**Telemetry is off by default and is never prompted for.** If you set `SECUREALY_TELEMETRY=1`, each of the runs listed under the learning record also sends one POST to `https://securealy.com/api/telemetry` with exactly this and nothing else:
+
+```json
+{ "command": "grade", "tier": "passive", "grade": "B", "score": 83, "durationMs": 4120, "requests": 19,
+  "counts": { "pass": 38, "fail": 4, "warn": 3, "skip": 6, "error": 0, "blocker": 0 },
+  "engine": "0.1.1", "node": 22,
+  "stack": { "host": "vercel", "builder": "lovable", "db": "supabase", "payments": "stripe", "framework": "next" },
+  "failed": ["hsts", "not-found-page"] }
+```
+
+`command` is one of `grade`, `local`, `scan-repo`, `check-rls`, `check-stripe`, `check-vercel-env`, or `mcp.grade_url`, `mcp.scan_repo`, `mcp.check_rls`, `mcp.check_stripe`, `mcp.check_vercel_env`. `engine` is the engine version, `node` the Node major version, and `stack.host` is the hosting platform kind the grader detected (`vercel`, `netlify`), not your hostname; a field the grader could not detect is `null`. No URL, no hostname, no path, no evidence, no token and no environment value ever leaves. The request is fire and forget with a three-second timeout; a failure is silent and never changes a run. The aggregate is used to tune the catalogue: which checks fail most on which stacks.
 
 ## Using it in CI
 

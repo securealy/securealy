@@ -7,6 +7,8 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { grade, runLocal, catalogue, catalogueEntry, OptOutError, VerificationError } from 'securealy-core';
 import type { Category, GradeResult, Resolver, Tier } from 'securealy-core';
+import { recordRun } from 'securealy/record';
+import type { RunCommand } from 'securealy/record';
 import { API_BASE, ApiError, fetchFix, hostedGrade, postResult } from './api.js';
 import { Redactor } from './redact.js';
 import { summarize } from './summary.js';
@@ -30,6 +32,8 @@ export interface ServerOptions {
   pollIntervalMs?: number;
   /** Diagnostic lines. Never stdout: stdio is the protocol channel. */
   log?: (line: string) => void;
+  /** Injectable for tests: where SECUREALY_TELEMETRY=1 posts. Defaults to the securealy.com endpoint. */
+  telemetryEndpoint?: string;
 }
 
 const CATEGORIES = ['security', 'email', 'domain', 'seo', 'hygiene', 'payments', 'analytics', 'performance'] as const;
@@ -77,7 +81,21 @@ export function createServer(opts: ServerOptions = {}): McpServer {
     return out;
   };
   const fail = (text: string): CallToolResult => ({ content: [{ type: 'text', text: redactor.text(text) }], isError: true });
-  const resultText = (r: GradeResult): string => `${summarize(r)}\n\nGradeResult JSON:\n${JSON.stringify(r)}`;
+  /**
+   * Append the run to .securealy/history.json under the server's working
+   * directory (ids and numbers only, never evidence) and, when the user set
+   * SECUREALY_TELEMETRY=1, send the aggregate payload without waiting for it.
+   * The comparison with the previous grade of the same host joins the text.
+   */
+  const record = (r: GradeResult, command: RunCommand): string | undefined => {
+    const rec = recordRun(r, command, { cwd: baseCwd, env, fetch: fetchImpl, telemetryEndpoint: opts.telemetryEndpoint, userAgent: USER_AGENT });
+    void rec.telemetry;
+    return rec.comparison;
+  };
+  const resultText = (r: GradeResult, command: RunCommand): string => {
+    const comparison = record(r, command);
+    return `${summarize(r)}${comparison ? `\n${comparison}` : ''}\n\nGradeResult JSON:\n${JSON.stringify(r)}`;
+  };
   const errText = (e: unknown): string => (e instanceof Error ? `${e.name}: ${e.message}` : String(e));
 
   const runLocalSet = async (checks: readonly string[], cwd: string, extraEnv: Record<string, string | undefined> = {}): Promise<GradeResult> => {
@@ -94,6 +112,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
         'Start with grade_url on the live or preview URL, then scan_repo on the source folder. Read blockers first.',
         'Use get_check or fetch_fix for the fix behind any failing check id. Local checks (scan_repo, check_rls, check_stripe, check_vercel_env) read the user\'s own environment and send nothing to Securealy.',
         'Every output is passed through a redactor; never ask the user to paste a secret into the conversation.',
+        'Each run appends one entry (grade, score, counts, failing check ids; never evidence) to .securealy/history.json in the working directory, and grade_url reports the change since the previous grade of the same host. SECUREALY_NO_HISTORY=1 turns that off; SECUREALY_TELEMETRY=1 (off by default) sends an anonymous aggregate to securealy.com.',
       ].join(' '),
     },
   );
@@ -124,10 +143,10 @@ export function createServer(opts: ServerOptions = {}): McpServer {
           const t = token?.trim();
           if (!t) return fail('tier verified needs a Securealy project token (token: "sly_..."). Run a passive grade instead, or get a token at securealy.com.');
           const r = await hostedGrade(url, t, api);
-          return ok(resultText(r), r as unknown as Record<string, unknown>);
+          return ok(resultText(r, 'mcp.grade_url'), r as unknown as Record<string, unknown>);
         }
         const r = await grade(url, { tier: 'passive', bypassToken: bypassToken?.trim(), fetch: fetchImpl, dns: opts.dns, skipDnssec: opts.skipDnssec, timeoutMs: opts.timeoutMs, log });
-        return ok(resultText(r), r as unknown as Record<string, unknown>);
+        return ok(resultText(r, 'mcp.grade_url'), r as unknown as Record<string, unknown>);
       } catch (e) {
         if (e instanceof OptOutError) return fail(`This host has opted out of passive grading (${e.message}). Do not grade it; the owner can run the CLI locally instead.`);
         if (e instanceof VerificationError) return fail(e.message);
@@ -169,7 +188,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
       }
       try {
         const r = await runLocalSet(LOCAL_SETS.scan_repo, abs);
-        return ok(resultText(r), r as unknown as Record<string, unknown>);
+        return ok(resultText(r, 'mcp.scan_repo'), r as unknown as Record<string, unknown>);
       } catch (e) {
         return fail(`scan_repo failed: ${errText(e)}`);
       }
@@ -190,7 +209,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
     async () => {
       try {
         const r = await runLocalSet(LOCAL_SETS.check_rls, baseCwd);
-        return ok(resultText(r), r as unknown as Record<string, unknown>);
+        return ok(resultText(r, 'mcp.check_rls'), r as unknown as Record<string, unknown>);
       } catch (e) {
         return fail(`check_rls failed: ${errText(e)}`);
       }
@@ -212,7 +231,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
     async ({ productionHost }) => {
       try {
         const r = await runLocalSet(LOCAL_SETS.check_stripe, baseCwd, { SECUREALY_PRODUCTION_URL: productionHost.trim() });
-        return ok(resultText(r), r as unknown as Record<string, unknown>);
+        return ok(resultText(r, 'mcp.check_stripe'), r as unknown as Record<string, unknown>);
       } catch (e) {
         return fail(`check_stripe failed: ${errText(e)}`);
       }
@@ -234,7 +253,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
     async ({ projectId }) => {
       try {
         const r = await runLocalSet(LOCAL_SETS.check_vercel_env, baseCwd, projectId ? { VERCEL_PROJECT_ID: projectId.trim() } : {});
-        return ok(resultText(r), r as unknown as Record<string, unknown>);
+        return ok(resultText(r, 'mcp.check_vercel_env'), r as unknown as Record<string, unknown>);
       } catch (e) {
         return fail(`check_vercel_env failed: ${errText(e)}`);
       }
