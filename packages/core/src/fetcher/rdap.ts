@@ -25,7 +25,15 @@ export async function gatherRdap(client: HttpClient, apex: string, platformSuffi
       lastError = rec.error;
       continue;
     }
-    if (rec.status === 404) return { expires: null, error: 'domain not found in RDAP' };
+    if (rec.status === 404) {
+      // rdap.org redirects to the registry when it knows the TLD. A 404 that
+      // never left rdap.org means the IANA bootstrap lists no RDAP server for
+      // the TLD (.me, .io, .sh among them), which says nothing about the domain.
+      const fromRegistry = rec.redirects.length > 0 || !/^https:\/\/rdap\.org\//.test(url);
+      if (fromRegistry) return { expires: null, error: 'domain not found in RDAP' };
+      lastError = `no RDAP server is listed for .${tld}`;
+      continue;
+    }
     if (rec.status !== 200 || !rec.body) {
       lastError = `RDAP ${rec.status}`;
       continue;
@@ -42,5 +50,6 @@ export async function gatherRdap(client: HttpClient, apex: string, platformSuffi
       lastError = 'RDAP body did not parse';
     }
   }
+  if (/^no RDAP server/.test(lastError)) return { expires: null, skipped: `${lastError} (tried rdap.org); registration expiry cannot be read` };
   return { expires: null, error: lastError };
 }

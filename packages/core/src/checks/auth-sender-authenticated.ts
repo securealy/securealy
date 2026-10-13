@@ -1,10 +1,12 @@
 import type { CheckModule } from './context.js';
 import { result } from './context.js';
-import { dkimSelectors, dmarcRecord, spfRecords } from './mail.js';
+import { dkimSelectors, dmarcRecord, noSendingExpected, spfRecords } from './mail.js';
 
 export const check: CheckModule = {
   id: 'auth-sender-authenticated',
   run(ctx) {
+    const gate = noSendingExpected(ctx, this.id);
+    if (gate) return gate;
     const selectors = dkimSelectors(ctx);
     const spf = spfRecords(ctx).length === 1;
     const dmarc = dmarcRecord(ctx) !== null;
@@ -23,6 +25,6 @@ export const check: CheckModule = {
     }
     if (ctx.ev.platformSuffix) return result(this.id, 'skip', `platform subdomain under ${ctx.ev.platformSuffix}; no sending domain to judge`);
     if (!spf && !dmarc && ctx.ev.dns.mx.length === 0) return result(this.id, 'skip', `no DKIM, SPF, DMARC or MX at ${ctx.ev.apex}; no sending domain could be inferred`);
-    return result(this.id, 'warn', `no DKIM selector found at ${ctx.ev.apex} (SPF ${spf ? 'yes' : 'no'}, DMARC ${dmarc ? 'yes' : 'no'}); transactional mail cannot be fully authenticated`);
+    return result(this.id, 'warn', `no common DKIM selector found at ${ctx.ev.apex} (SPF ${spf ? 'yes' : 'no'}, DMARC ${dmarc ? 'yes' : 'no'}); if the provider uses a custom selector this is a false alarm, otherwise transactional mail cannot be fully authenticated`);
   },
 };

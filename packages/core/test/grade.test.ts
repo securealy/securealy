@@ -85,7 +85,8 @@ describe('grade', () => {
     const r = await grade('https://does-not-exist-securealy-test.invalid', { fetch: fetchImpl, dns: dead, skipDnssec: true, timeoutMs: 20_000 });
     expect(r.checks).toHaveLength(51);
     expect(r.checks.find((c) => c.id === 'tls-valid')?.status).toBe('fail');
-    expect(r.checks.find((c) => c.id === 'domain-expiry')?.status).toBe('fail');
+    // rdap.org answered 404 without redirecting, so there is no RDAP server for the TLD: not a verdict on the domain.
+    expect(r.checks.find((c) => c.id === 'domain-expiry')?.status).toBe('skip');
     expect(r.summary.skip).toBeGreaterThan(30);
     expect(r.summary.error).toBe(0);
     expect(r.grade).toBe('F');

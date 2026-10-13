@@ -16,7 +16,9 @@ const FIXTURE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
 <title>Fixture app for the Securealy MCP tests</title><meta name="description" content="A tiny page served by the test suite so grade_url has something real to fetch.">
 <link rel="canonical" href="https://fixture.example/"><script src="/app.js"></script></head>
 <body><h1>Fixture</h1><a href="/privacy">Privacy</a><a href="/terms">Terms</a></body></html>`;
-const FIXTURE_JS = `console.log("hello");const stripe="sk_live_${'4'.repeat(24)}";`;
+// Random-looking so the placeholder guard does not dismiss it; FAKE marks it for the repo sweep.
+const FIXTURE_SECRET = 'sk_live_' + 'FAKE' + 'k7Qm2xP9vL4nR8tW3yB6';
+const FIXTURE_JS = `console.log("hello");const stripe="${FIXTURE_SECRET}";`;
 
 function fakeResolver(): Resolver {
   const nodata = () => Promise.reject(Object.assign(new Error('ENODATA'), { code: 'ENODATA' }));
@@ -130,7 +132,7 @@ describe('grade_url', () => {
     expect(secrets.status).toBe('fail');
     expect(t).toContain('BLOCKERS');
     expect(t).toContain('secrets-in-bundle');
-    expect(t).not.toContain('sk_live_' + '4'.repeat(24));
+    expect(t).not.toContain(FIXTURE_SECRET);
     expect(JSON.stringify(r)).not.toContain('4'.repeat(24));
     const hsts = structured.checks.find((c) => c.id === 'hsts')!;
     expect(hsts.status).toBe('pass');

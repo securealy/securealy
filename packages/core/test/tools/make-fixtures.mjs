@@ -4,7 +4,12 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { catalogue, emptyEvidence, makeRecord } from 'securealy-core';
+import { catalogue, emptyEvidence, makeRecord, DKIM_SELECTORS } from 'securealy-core';
+
+/** Every queried selector, all unanswered. */
+function noDkim() {
+  return Object.fromEntries(DKIM_SELECTORS.map((s) => [s, null]));
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(here, '..', 'fixtures');
@@ -127,7 +132,7 @@ function base() {
     mx: [{ exchange: 'mx1.mail.example', priority: 10 }],
     txt: ['v=spf1 include:_spf.mail.example -all'],
     dmarc: [`v=DMARC1; p=reject; rua=mailto:dmarc@${HOST}`],
-    dkim: { resend: 'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAFAKEFAKEFAKEFAKEFAKE', google: null, default: null, k1: null, selector1: null, s1: null },
+    dkim: { ...noDkim(), resend: 'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAFAKEFAKEFAKEFAKEFAKE' },
     caa: ['issue "letsencrypt.org"'],
     dnssec: true,
     securealyTxt: [],
@@ -190,7 +195,10 @@ const CASES = {
     (ev) => ((ev.page = page(html(), {}, { setCookie: ['session=abc123; Path=/; Secure; HttpOnly; SameSite=Lax'] })), ev),
     (ev) => ((ev.page = page(html(), {}, { setCookie: ['session=abc123; Path=/'] })), ev),
   ],
-  'cors-wildcard-credentials': [null, (ev) => ((ev.page = page(html(), { 'access-control-allow-origin': '*', 'access-control-allow-credentials': 'true' })), ev)],
+  'cors-wildcard-credentials': [
+    (ev) => ((ev.page = page(html(), { 'access-control-allow-origin': ORIGIN, vary: 'Origin' })), ev),
+    (ev) => ((ev.page = page(html(), { 'access-control-allow-origin': '*', 'access-control-allow-credentials': 'true' })), ev),
+  ],
   'server-leak': [null, (ev) => ((ev.page = page(html(), { server: 'nginx/1.18.0', 'x-powered-by': 'PHP/8.1.2' })), ev)],
   'source-maps': [
     null,
@@ -205,7 +213,8 @@ const CASES = {
   ],
   'ai-leftovers': [null, (ev) => ((ev.page = page(html({ extraBody: '<a id="lovable-badge" href="https://lovable.dev">Edit with Lovable</a>' }))), ev)],
   spf: [null, (ev) => ((ev.dns.txt = []), ev)],
-  dkim: [null, (ev) => ((ev.dns.dkim = { resend: null, google: null, default: null, k1: null, selector1: null, s1: null }), ev)],
+  // The fail case names a provider with fixed selectors in SPF, so a miss on every selector is conclusive.
+  dkim: [null, (ev) => ((ev.dns.dkim = noDkim()), (ev.dns.txt = ['v=spf1 include:_spf.google.com ~all']), ev)],
   dmarc: [null, (ev) => ((ev.dns.dmarc = []), ev)],
   mx: [null, (ev) => ((ev.dns.mx = []), ev)],
   'auth-sender-authenticated': [null, (ev) => ((ev.dns.txt = []), (ev.dns.dmarc = []), ev)],
@@ -235,7 +244,7 @@ const CASES = {
     null,
     (ev) => ((ev.page = page(html({ analytics: '<script async src="https://www.googletagmanager.com/gtag/js?id=G-ABCDEFGH12"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date());gtag("config","G-ABCDEFGH12");</script>' }))), ev),
   ],
-  ttfb: [null, (ev) => ((ev.page = page(html(), {}, { ttfbMs: 1500 })), ev)],
+  ttfb: [null, (ev) => ((ev.page = page(html(), {}, { ttfbMs: 2500 })), ev)],
   'page-weight': [null, (ev) => ((ev.bundles = [bundle(BUNDLE_BODY, { contentLength: 2_500_000, bytes: 2_000_000 })]), ev)],
   'largest-image': [null, (ev) => ((ev.imageSamples = [head(`${ORIGIN}/hero.png`, 200, { 'content-type': 'image/png' }, 900_000)]), ev)],
   'render-blocking': [

@@ -45,7 +45,7 @@ User-Agent on every request: `SecurealyGrader/1.0 (+https://securealy.com/grader
 }
 ```
 
-Status values: `pass`, `fail`, `warn` (true but low confidence or partial), `skip` (not applicable, with evidence saying why), `error` (the check could not run). `severity` is copied from the catalogue so a result is self-describing. Evidence is a short string, never a response body, and secrets in evidence are always redacted to a prefix plus an ellipsis.
+Status values: `pass`, `fail`, `warn` (true but low confidence or partial), `skip` (not applicable, with evidence saying why), `error` (the check could not run). A check that cannot be judged from the evidence gathered returns `skip` with the reason, never `fail`; evidence always says what was looked for and what was found. `severity` is copied from the catalogue so a result is self-describing. Evidence is a short string, never a response body, and secrets in evidence are always redacted to a prefix plus an ellipsis.
 
 ## Scoring
 
@@ -93,7 +93,7 @@ The owner never publishes the `sly_` token itself. The published value is a fing
 
 ## Budgets
 
-Passive: at most 25 HTTP requests (redirect hops, the RDAP lookup and the single Supabase REST request all count), 8 seconds per request, 3 redirects, 45 seconds overall. The verified tier gets 60 additional requests for its probes. `requests` in the result is the number actually made. `opts.maxRequests` and `opts.timeoutMs` override the defaults.
+Passive: at most 25 HTTP requests (redirect hops, the RDAP lookup, the single Supabase REST request and the one GET retry made when a HEAD answers 405 or 501 all count), 8 seconds per request, 3 redirects, 45 seconds overall. The verified tier gets 60 additional requests for its probes. `requests` in the result is the number actually made. `opts.maxRequests` and `opts.timeoutMs` override the defaults.
 
 ## Errors
 

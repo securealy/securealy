@@ -5,7 +5,15 @@ import type { DnsEvidence } from '../evidence.js';
 import { emptyDns } from '../evidence.js';
 import type { Resolver } from '../types.js';
 
-export const DKIM_SELECTORS = ['resend', 'google', 'default', 'k1', 'selector1', 's1'];
+/**
+ * Selectors the common senders publish under. Queried in parallel; a miss on
+ * every one is evidence the common providers are not set up, not proof that
+ * no DKIM exists (SES and Postmark use per-domain random selectors).
+ */
+export const DKIM_SELECTORS = [
+  'resend', 'google', 'default', 'k1', 'k2', 'k3', 's1', 's2', 'selector1', 'selector2', 'mail', 'dkim',
+  'mandrill', 'pm', 'sendgrid', 'mailgun', 'mg', 'smtp', 'email', 'amazonses', 'protonmail', 'zoho', 'fm1', 'fm2',
+];
 const DNS_TIMEOUT_MS = 5_000;
 
 export function defaultResolver(): Resolver {

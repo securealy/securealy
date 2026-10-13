@@ -26,6 +26,8 @@ export interface HttpRecord {
   truncated?: boolean;
   /** what the first bytes looked like, recorded even when the body is discarded */
   bodyHint?: BodyHint;
+  /** set when a HEAD answered 405 or 501 and the record comes from the GET retry */
+  headFallback?: number;
   error?: string;
 }
 

@@ -128,7 +128,18 @@ export function createClient(
   log: (line: string) => void,
   defaults: { bypass?: { host: string; token: string } | null } = {},
 ): HttpClient {
+  /** Some origins (Python functions, old proxies) refuse HEAD outright; that says nothing about the resource, so ask again with GET and discard the body. */
   async function request(inputUrl: string, opts: RequestOptions = {}): Promise<HttpRecord> {
+    const rec = await requestOnce(inputUrl, opts);
+    if ((opts.method ?? 'GET') === 'HEAD' && (rec.status === 405 || rec.status === 501) && budget.remaining > 0) {
+      log(`HEAD ${inputUrl} -> ${rec.status}, retrying as GET`);
+      const again = await requestOnce(inputUrl, { ...opts, method: 'GET', keepBytes: 0 });
+      again.headFallback = rec.status;
+      return again;
+    }
+    return rec;
+  }
+  async function requestOnce(inputUrl: string, opts: RequestOptions = {}): Promise<HttpRecord> {
     const method = opts.method ?? 'GET';
     const keepBytes = opts.keepBytes ?? 0;
     const follow = opts.follow ?? true;

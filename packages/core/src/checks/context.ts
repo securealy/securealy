@@ -51,9 +51,19 @@ export function result(id: string, status: Status, evidence: string, detail?: st
 export function needPage(ctx: CheckContext, id: string, needHtml = true): CheckResult | null {
   const p = ctx.ev.page;
   if (!p) return result(id, 'skip', `no response from ${ctx.ev.host}${ctx.ev.log.length ? ': ' + (ctx.ev.log.find((l) => l.startsWith('no response')) ?? '') : ''}`.trim());
-  if (p.status >= 400) return result(id, 'error', `home page answered ${p.status}${p.status === 403 ? ' (bot blocking or protection)' : ''}; cannot judge`);
+  if (p.status >= 400) return result(id, 'error', `home page answered ${p.status}${challengeNote(p)}; cannot judge`);
   if (needHtml && !ctx.page) return result(id, 'error', `home page is not HTML (${p.headers['content-type'] ?? 'no content-type'})`);
   return null;
+}
+
+/** Names the bot challenge in front of the site when the response headers identify one. */
+export function challengeNote(p: HttpRecord): string {
+  const h = p.headers;
+  if (h['x-vercel-mitigated'] || h['x-vercel-challenge-token']) return ' (Vercel bot challenge; grade with --bypass or allow the grader in Firewall settings)';
+  if (h['cf-mitigated'] || /cloudflare/i.test(h['server'] ?? '') && (p.status === 403 || p.status === 429 || p.status === 503)) return ' (Cloudflare challenge; allow the grader in a WAF rule)';
+  if (p.status === 403) return ' (bot blocking or protection)';
+  if (p.status === 429) return ' (rate limited on the first request; a bot gate, not load)';
+  return '';
 }
 
 export function describe(rec: HttpRecord | null | undefined): string {

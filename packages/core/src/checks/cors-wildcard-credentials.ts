@@ -18,7 +18,8 @@ export const check: CheckModule = {
       if (acao?.trim() === '*' && /true/i.test(acac ?? '')) bad.push(r.where);
     }
     if (bad.length) return result(this.id, 'fail', `Access-Control-Allow-Origin: * with Allow-Credentials: true on ${bad.slice(0, 3).join(', ')}`);
-    if (!anyCors) return result(this.id, 'pass', `no CORS headers on ${responses.length} response${responses.length === 1 ? '' : 's'} inspected`);
+    // No CORS header anywhere means nothing was judged: the API routes that would carry one are only probed in the verified tier.
+    if (!anyCors) return result(this.id, 'skip', `no Access-Control-Allow-Origin on ${responses.length === 1 ? 'the home page' : `${responses.length} responses`}; API routes are inspected in the verified tier`);
     return result(this.id, 'pass', 'CORS headers present without the wildcard-plus-credentials combination');
   },
 };

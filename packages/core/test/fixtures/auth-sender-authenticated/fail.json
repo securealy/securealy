@@ -40,8 +40,26 @@
       "google": null,
       "default": null,
       "k1": null,
+      "k2": null,
+      "k3": null,
+      "s1": null,
+      "s2": null,
       "selector1": null,
-      "s1": null
+      "selector2": null,
+      "mail": null,
+      "dkim": null,
+      "mandrill": null,
+      "pm": null,
+      "sendgrid": null,
+      "mailgun": null,
+      "mg": null,
+      "smtp": null,
+      "email": null,
+      "amazonses": null,
+      "protonmail": null,
+      "zoho": null,
+      "fm1": null,
+      "fm2": null
     },
     "caa": [
       "issue \"letsencrypt.org\""

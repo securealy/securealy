@@ -30,6 +30,8 @@ export interface ImageRef {
 export interface AnchorRef {
   href: string;
   text: string;
+  /** lower-cased rel attribute, empty when absent */
+  rel: string;
 }
 
 /** A serializable, check-friendly view of the home page. */
@@ -140,7 +142,7 @@ export function parsePage(html: string): ParsedPage {
       }
       case 'a': {
         const href = attr(el, 'href');
-        if (href) out.anchors.push({ href, text: DomUtils.textContent(el).trim().slice(0, 80) });
+        if (href) out.anchors.push({ href, text: DomUtils.textContent(el).trim().slice(0, 80), rel: (attr(el, 'rel') ?? '').toLowerCase() });
         break;
       }
       case 'iframe': {

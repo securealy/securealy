@@ -9,8 +9,9 @@ const GITHUB = 'ghp_' + 'FAKEabcdefghijklmnopqrstuvwxyz0123456789';
 const SLACK = 'xoxb-' + '000000000000-000000000000-FAKEabcdefghij';
 const SENDGRID = 'SG.' + 'FAKEabcdefghijklmnop' + '.' + 'FAKEabcdefghijklmnopqrstuvwxyz';
 const RESEND = 're_' + 'FAKEabcd' + '_' + 'FAKEabcdefghijklmnopqrst';
-const TWILIO_SK = 'SK' + 'f'.repeat(32);
-const TWILIO_AC = 'AC' + 'e'.repeat(32);
+// Varied hex: a single repeated character is a documentation placeholder, which the scanner ignores on purpose.
+const TWILIO_SK = 'SK' + 'f1e2d3c4b5a69788776655443322110a';
+const TWILIO_AC = 'AC' + 'e1d2c3b4a5968778695a4b3c2d1e0f9a';
 
 function serviceRoleJwt(): string {
   const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');

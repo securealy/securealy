@@ -61,24 +61,30 @@ export function detectDnsProvider(ns: string[]): string | undefined {
   return parts.length >= 2 ? parts.slice(-2).join('.') : first;
 }
 
+/**
+ * Builder markers are things a builder leaves in a generated site (its badge,
+ * its asset host, its bootstrap script), never a bare mention of the product:
+ * a page that links to lovable.dev or v0.dev is not built with it.
+ */
 export function detectBuilder(t: string, headers: Record<string, string>): string | undefined {
-  if (/lovable\.dev|lovable\.app|gptengineer|lovable-badge|lovable-uploads/.test(t)) return 'lovable';
-  if (/bolt\.new|bolt\.host|stackblitz/.test(t)) return 'bolt';
-  if (/v0\.dev|v0\.app|v0-user-next|built with v0/.test(t)) return 'v0';
-  if (/replit\.dev|replit\.app|replit-badge|repl\.co/.test(t)) return 'replit';
-  if (/base44/.test(t)) return 'base44';
-  if (/softr/.test(t)) return 'softr';
-  if (/framerusercontent|framer\.com|content="framer/.test(t) || (headers['server'] ?? '').toLowerCase().includes('framer')) return 'framer';
-  if (/data-wf-page|webflow\.com|webflow\.io/.test(t)) return 'webflow';
-  if (/wixstatic\.com|wix\.com|x-wix/.test(t) || headers['x-wix-request-id']) return 'wix';
+  if (/lovable-badge|lovable-uploads\/|lovable\.dev\/opengraph|gptengineer\.js|cdn\.gpteng\.co|content="lovable"|\.lovable\.app\/|lovableproject\.com/.test(t)) return 'lovable';
+  if (/\.bolt\.host\/|bolt-badge|built with bolt|stackblitz-badge|bolt\.new\/badge/.test(t)) return 'bolt';
+  if (/v0-user-next|built with v0|content="v0"|v0\.app\/badge|v0-badge/.test(t)) return 'v0';
+  if (/replit-badge|made with replit|\.replit\.app\/|\.repl\.co\/|replit\.com\/public\/js\/replit-badge/.test(t)) return 'replit';
+  if (/base44\.app\/|base44-badge|app\.base44\.com/.test(t)) return 'base44';
+  if (/softr-badge|\.softr\.app\/|softr\.io\/(?:css|js)|content="softr"/.test(t)) return 'softr';
+  if (/framerusercontent\.com|content="framer|framer-badge|__framer/.test(t) || (headers['server'] ?? '').toLowerCase().includes('framer')) return 'framer';
+  if (/data-wf-page|data-wf-site|w-webflow-badge|\.webflow\.io\//.test(t)) return 'webflow';
+  if (/static\.wixstatic\.com|static\.parastorage\.com|x-wix|wix-code/.test(t) || headers['x-wix-request-id']) return 'wix';
   return undefined;
 }
 
 export function detectDb(ev: Evidence, t: string): string | undefined {
-  if (ev.supabase || /\.supabase\.(co|in)/.test(t)) return 'supabase';
-  if (ev.firebase || /firebaseapp\.com|firebaseio\.com|firestore\.googleapis/.test(t)) return 'firebase';
-  if (/convex\.cloud/.test(t)) return 'convex';
-  if (/\.pocketbase\.|pocketbase/.test(t)) return 'pocketbase';
+  // A Supabase project URL or the client library, not a mention of the product.
+  if (ev.supabase || /@supabase\/supabase-js|supabase-js\/|\/\/[a-z0-9-]{10,}\.supabase\.(?:co|in|red)\/(?:rest|auth|storage|realtime|functions)\//.test(t)) return 'supabase';
+  if (ev.firebase || /firebaseio\.com|firestore\.googleapis|firebasestorage\.googleapis|\.firebaseapp\.com\//.test(t)) return 'firebase';
+  if (/\.convex\.cloud/.test(t)) return 'convex';
+  if (/pocketbase\.io\/|\/api\/collections\/[a-z0-9_]+\/records|new pocketbase\(/.test(t)) return 'pocketbase';
   return undefined;
 }
 
@@ -90,20 +96,30 @@ export function detectPayments(t: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Analytics is detected by the script host a vendor loads from or by the
+ * vendor's own inline bootstrap, never by a bare identifier: a first-party
+ * script that guards `if (window.gtag)` or a link to /gtm-template is not a tag.
+ * `t` is lower-cased page HTML plus the first-party bundles.
+ */
+export const ANALYTICS_SIGNATURES: [string, RegExp][] = [
+  ['ga4', /googletagmanager\.com\/gtag\/js|google-analytics\.com\/g\/collect|gtag\(\s*['"]config['"]\s*,\s*['"]g-[a-z0-9]{6,12}['"]/],
+  ['gtm', /googletagmanager\.com\/gtm\.js|googletagmanager\.com\/ns\.html\?id=gtm-|['"]dataLayer['"]\s*,\s*['"]gtm-[a-z0-9]{5,}['"]/],
+  ['plausible', /<script[^>]+src=["'][^"']*plausible\.io\/js\/|<script[^>]+data-domain=[^>]+src=["'][^"']*\/js\/(?:script|plausible)[^"']*["']|<script[^>]+src=["'][^"']*\/js\/(?:script|plausible)[^"']*["'][^>]+data-domain=|plausible\.io\/api\/event/],
+  ['posthog', /posthog\.com\/static\/array\.js|posthog\.init\s*\(|\bphc_[a-z0-9]{20,}|[a-z]+\.i\.posthog\.com/],
+  ['fathom', /usefathom\.com\/script\.js|cdn\.usefathom\.com/],
+  ['umami', /<script[^>]+data-website-id=|umami\.is\/script\.js|cloud\.umami\.is/],
+  ['vercel-analytics', /\/_vercel\/insights\/script\.js|va\.vercel-scripts\.com|window\.va\s*=\s*window\.va\s*\|\|/],
+  ['mixpanel', /cdn\.mxpnl\.com|api(?:-js)?\.mixpanel\.com|mixpanel\.init\s*\(/],
+  ['segment', /cdn\.segment\.(?:com|io)\/analytics\.js|analytics\.load\s*\(\s*['"]/],
+  ['hotjar', /static\.hotjar\.com|_hjsettings\s*=/],
+  ['clarity', /clarity\.ms\/tag\/|window\.clarity\s*=|\bclarity\s*\(\s*['"]set['"]/],
+  ['simpleanalytics', /simpleanalyticscdn\.com|scripts\.simpleanalytics\.(?:com|io)|queue\.simpleanalyticscdn/],
+];
+
 export function detectAnalytics(t: string): string[] {
   const out: string[] = [];
-  if (/googletagmanager\.com\/gtag\/js|gtag\(|google-analytics\.com\/g\/collect|\bg-[a-z0-9]{8,12}\b/.test(t)) out.push('ga4');
-  if (/googletagmanager\.com\/gtm\.js|gtm-[a-z0-9]{5,}/.test(t)) out.push('gtm');
-  if (/plausible\.io\/js|data-domain=/.test(t) && /plausible/.test(t)) out.push('plausible');
-  if (/posthog/.test(t)) out.push('posthog');
-  if (/usefathom\.com|cdn\.usefathom/.test(t)) out.push('fathom');
-  if (/umami/.test(t) && /data-website-id/.test(t)) out.push('umami');
-  if (/vercel\/analytics|_vercel\/insights|va\.vercel-scripts/.test(t)) out.push('vercel-analytics');
-  if (/mixpanel/.test(t)) out.push('mixpanel');
-  if (/segment\.com\/analytics\.js|cdn\.segment/.test(t)) out.push('segment');
-  if (/hotjar/.test(t)) out.push('hotjar');
-  if (/clarity\.ms/.test(t)) out.push('clarity');
-  if (/simpleanalytics/.test(t)) out.push('simpleanalytics');
+  for (const [name, re] of ANALYTICS_SIGNATURES) if (re.test(t)) out.push(name);
   return out;
 }
 
@@ -111,9 +127,16 @@ export function detectEmailProvider(ev: Evidence): string | undefined {
   const d = ev.dns.dkim;
   if (d['resend']) return 'resend';
   if (d['google']) return 'google';
-  if (d['selector1']) return 'microsoft';
-  if (d['k1']) return 'mailchimp';
-  if (d['s1']) return 'sendgrid';
+  if (d['selector1'] || d['selector2']) return 'microsoft';
+  if (d['k1'] || d['k2'] || d['k3']) return 'mailchimp';
+  if (d['s1'] || d['s2']) return 'sendgrid';
+  if (d['mandrill']) return 'mandrill';
+  if (d['pm']) return 'postmark';
+  if (d['mailgun'] || d['mg']) return 'mailgun';
+  if (d['amazonses']) return 'ses';
+  if (d['protonmail']) return 'proton';
+  if (d['zoho']) return 'zoho';
+  if (d['fm1'] || d['fm2']) return 'fastmail';
   const spf = ev.dns.txt.find((t) => /^v=spf1/i.test(t)) ?? '';
   if (/amazonses/.test(spf)) return 'ses';
   if (/resend/.test(spf)) return 'resend';
@@ -123,13 +146,17 @@ export function detectEmailProvider(ev: Evidence): string | undefined {
   if (/mailgun\.org/.test(spf)) return 'mailgun';
   if (/postmarkapp|mtasv\.net/.test(spf)) return 'postmark';
   if (/servers\.mcsv\.net/.test(spf)) return 'mailchimp';
-  if (d['default']) return 'custom';
+  if (/zoho/.test(spf)) return 'zoho';
+  if (/protonmail\.ch/.test(spf)) return 'proton';
+  if (/messagingengine\.com/.test(spf)) return 'fastmail';
+  if (Object.values(d).some((v) => v !== null)) return 'custom';
   const mx = ev.dns.mx.map((m) => m.exchange).join(' ');
   if (/google\.com|googlemail/.test(mx)) return 'google';
   if (/outlook\.com/.test(mx)) return 'microsoft';
   if (/zoho/.test(mx)) return 'zoho';
   if (/icloud\.com/.test(mx)) return 'icloud';
   if (/protonmail|proton\.me/.test(mx)) return 'proton';
+  if (/messagingengine\.com/.test(mx)) return 'fastmail';
   if (/improvmx|forwardemail/.test(mx)) return 'forwarding';
   return undefined;
 }

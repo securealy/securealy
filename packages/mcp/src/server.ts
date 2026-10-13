@@ -205,7 +205,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
         'Run stripe-webhook-wiring with STRIPE_SECRET_KEY from this server\'s environment: confirms a live-mode key is in use, that at least one enabled webhook endpoint points at the production host, and that it subscribes to the checkout and subscription events. ' +
         'The key is trimmed, sent only to api.stripe.com, and never appears in the output. Provide productionHost so the endpoint host can be compared.',
       inputSchema: {
-        productionHost: z.string().min(1).describe('The production hostname or URL the webhook should point at, for example my-app.com.'),
+        productionHost: z.string().min(1).describe('The production hostname or URL the webhook should point at, for example my-app.example.'),
       },
       annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
     },

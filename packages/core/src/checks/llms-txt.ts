@@ -9,7 +9,8 @@ export const check: CheckModule = {
     const r = ctx.ev.llmsTxt;
     if (!r) return result(this.id, 'skip', '/llms.txt was not requested');
     if (r.status === 200 && r.bodyHint !== 'html') return result(this.id, 'pass', `/llms.txt present (${r.bytes} bytes)`);
-    if (r.status === 200) return result(this.id, 'fail', '/llms.txt answers 200 with HTML (soft 404)');
-    return result(this.id, 'fail', `/llms.txt answers ${describe(r)}`);
+    // Optional hygiene, so its absence is a note rather than a failure.
+    if (r.status === 200) return result(this.id, 'warn', '/llms.txt answers 200 with HTML (the catch-all page), so there is no llms.txt; optional, add one if AI answer engines matter to you');
+    return result(this.id, 'warn', `/llms.txt answers ${describe(r)}; optional, add one if AI answer engines matter to you`);
   },
 };

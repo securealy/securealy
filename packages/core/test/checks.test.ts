@@ -10,6 +10,8 @@ const FIXTURES = join(__dirname, 'fixtures');
 const EXPECTED_FAIL: Record<string, Status> = {
   'firebase-config': 'warn',
   'consent-mechanism': 'warn',
+  'llms-txt': 'warn',
+  'ai-crawler-policy': 'warn',
 };
 
 function load(id: string, kind: 'pass' | 'fail'): Evidence {

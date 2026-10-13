@@ -89,6 +89,17 @@ export function redactSecret(value: string): string {
  * Scan a text for secret-shaped strings. Returns at most `max` findings,
  * de-duplicated by kind and redacted prefix.
  */
+/**
+ * Documentation and sample code carry key-shaped placeholders: sk_live_xxxxxxxx,
+ * sk-YOUR_KEY_HERE, the AWS docs key that ends in EXAMPLE. A real key never
+ * repeats one character for its whole body or spells out that it is a placeholder.
+ */
+export function looksLikePlaceholder(value: string): boolean {
+  const body = value.replace(/^(?:sk|rk|pk)_(?:live|test)_|^sk-(?:ant-|proj-)?|^(?:AKIA|ASIA)|^SG\.|^re_|^gh[pousr]_|^github_pat_|^xox[abprs]-|^SK|^AC/, '');
+  if (new Set(body.toLowerCase()).size <= 3) return true;
+  return /xxxx|your[_-]?|example|placeholder|replace[_-]?me|insert|changeme|dummy|sample/i.test(body);
+}
+
 export function findSecrets(text: string, location: string, max = 20): SecretFinding[] {
   const out: SecretFinding[] = [];
   const seen = new Set<string>();
@@ -98,6 +109,7 @@ export function findSecrets(text: string, location: string, max = 20): SecretFin
     while ((m = p.re.exec(text)) !== null) {
       const value = m[0];
       if (p.verify && !p.verify(value)) continue;
+      if (p.kind !== 'private-key' && looksLikePlaceholder(value)) continue;
       const redacted = redactSecret(value);
       const key = `${p.kind}:${redacted}`;
       if (seen.has(key)) continue;

@@ -115,7 +115,7 @@
     "title": "Cookies are Secure, HttpOnly and SameSite",
     "severity": "medium",
     "tier": "passive",
-    "what": "Every Set-Cookie on the HTML response carries the three flags where appropriate.",
+    "what": "Every session-like Set-Cookie on the HTML response carries Secure, HttpOnly and SameSite; cookies that client-side analytics read by design are not held to HttpOnly.",
     "why": "A session cookie without HttpOnly is one XSS away from theft.",
     "module": "05",
     "freeFix": false
@@ -379,7 +379,7 @@
     "title": "DKIM record found",
     "severity": "high",
     "tier": "passive",
-    "what": "A DKIM record resolves for a common selector (resend, google, default, k1, selector1).",
+    "what": "A DKIM record resolves for one of the selectors the common providers publish under (resend, google, default, k1 to k3, s1, s2, selector1, selector2, mail, dkim, mandrill, pm, sendgrid, mailgun, smtp, email, amazonses, protonmail, zoho, fm1, fm2).",
     "why": "Without DKIM, transactional mail lands in spam.",
     "module": "08",
     "freeFix": false

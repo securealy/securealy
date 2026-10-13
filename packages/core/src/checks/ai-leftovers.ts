@@ -14,12 +14,14 @@ const MARKUP: [RegExp, string][] = [
   [/content="vite-react-typescript-starter"|vite \+ react|vite-react-typescript-starter/, 'starter template title'],
 ];
 
+const BUILDER_DOMAINS = ['lovable.dev', 'bolt.new', 'replit.com', 'framer.com', 'webflow.com'];
+
 const COPY: [RegExp, string][] = [
   [/lorem ipsum/, 'lorem ipsum'],
   [/your app name|your company name|company name here|your tagline here/, 'placeholder copy'],
   [/as an ai language model|i cannot browse|here'?s the updated code|i've updated the/, 'chat residue'],
   [/\btodo:|\bfixme\b|coming soon placeholder|insert text here/, 'TODO text'],
-  [/welcome to your (new )?(app|project|site)|hello world/, 'starter copy'],
+  [/welcome to your (new )?(app|project|site)\b/, 'starter copy'],
   [/```/, 'markdown code fence in visible text'],
 ];
 
@@ -31,7 +33,12 @@ export const check: CheckModule = {
     const page = ctx.page;
     if (!page) return result(this.id, 'error', 'page not parsed');
     const found: string[] = [];
-    for (const [re, label] of MARKUP) if (re.test(page.markers)) found.push(label);
+    // A builder's own marketing site carries its badge by definition; that is not a leftover.
+    const ownSite = BUILDER_DOMAINS.find((d) => ctx.ev.apex === d);
+    for (const [re, label] of MARKUP) {
+      if (ownSite && /badge/i.test(label) && new RegExp(ownSite.split('.')[0] ?? ownSite, 'i').test(label)) continue;
+      if (re.test(page.markers)) found.push(label);
+    }
     for (const [re, label] of COPY) if (re.test(page.text)) found.push(label);
     const title = (page.title ?? '').toLowerCase();
     if (/^(vite|react|next|nuxt|astro) app$|^(my|new) app$|^document$|^untitled$|^lovable app$|^v0 app$|^create next app$/.test(title)) found.push(`default title "${page.title}"`);

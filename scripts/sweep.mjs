@@ -98,6 +98,12 @@ const ALLOWED_HOSTS = [
   /(^|\.)verisign\.com$/,
   /(^|\.)sitemaps\.org$/,
   /(^|\.)lovable\.dev$/,
+  // Builder products the engine recognises by name.
+  /(^|\.)replit\.com$/,
+  /(^|\.)framer\.com$/,
+  /(^|\.)webflow\.com$/,
+  /(^|\.)v0\.dev$/,
+  /(^|\.)bolt\.new$/,
   /(^|\.)name\.com$/,
   /^your-app\./,
 ];
