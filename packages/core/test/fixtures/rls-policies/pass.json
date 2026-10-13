@@ -1,0 +1,27 @@
+{
+  "env": {
+    "SUPABASE_MGMT_TOKEN": "sbp_FAKEmanagementTokenFAKEmanagementToken",
+    "SUPABASE_PROJECT_REF": "abcdefghijklmnopqrst"
+  },
+  "responses": [
+    {
+      "match": "/database/query",
+      "bodyMatch": "relrowsecurity",
+      "status": 200,
+      "body": [
+        { "table": "invoices", "rls": true },
+        { "table": "profiles", "rls": true }
+      ]
+    },
+    {
+      "match": "/database/query",
+      "bodyMatch": "pg_policies",
+      "status": 200,
+      "body": [
+        { "tablename": "invoices", "policyname": "own invoices", "roles": "{authenticated}", "cmd": "SELECT", "permissive": "PERMISSIVE", "qual": "(auth.uid() = user_id)", "with_check": null },
+        { "tablename": "profiles", "policyname": "own profile", "roles": "{authenticated}", "cmd": "ALL", "permissive": "PERMISSIVE", "qual": "(auth.uid() = id)", "with_check": "(auth.uid() = id)" }
+      ]
+    }
+  ],
+  "expect": "pass"
+}

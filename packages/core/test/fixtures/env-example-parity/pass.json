@@ -1,0 +1,7 @@
+{
+  "files": {
+    "src/db.ts": "const url = process.env.SUPABASE_URL; const key = process.env['SUPABASE_SERVICE_KEY']; const pub = import.meta.env.VITE_PUBLIC_KEY; const env = process.env.NODE_ENV;\n",
+    ".env.example": "SUPABASE_URL=https://your-project.supabase.co\nSUPABASE_SERVICE_KEY=your-service-key\nVITE_PUBLIC_KEY=your-public-key\n"
+  },
+  "expect": "pass"
+}

@@ -1,0 +1,21 @@
+{
+  "env": {
+    "SUPABASE_MGMT_TOKEN": "sbp_FAKEmanagementTokenFAKEmanagementToken",
+    "SUPABASE_URL": "https://abcdefghijklmnopqrst.supabase.co"
+  },
+  "responses": [
+    {
+      "match": "/v1/projects/abcdefghijklmnopqrst/config/auth",
+      "status": 200,
+      "body": {
+        "disable_signup": false,
+        "external_anonymous_users_enabled": true,
+        "password_min_length": 6,
+        "mailer_otp_exp": 86400,
+        "uri_allow_list": "",
+        "site_url": "http://localhost:3000"
+      }
+    }
+  ],
+  "expect": "fail"
+}

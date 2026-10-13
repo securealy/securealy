@@ -1,0 +1,8 @@
+{
+  "git": true,
+  "files": {
+    ".gitignore": ".env*\n*.bak*\n!.env.example\n",
+    ".env.example": "STRIPE_SECRET_KEY=\n"
+  },
+  "expect": "pass"
+}

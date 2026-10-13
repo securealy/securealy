@@ -1,0 +1,21 @@
+{
+  "env": {
+    "VERCEL_TOKEN": "FAKEvercelTokenFAKEvercelTokenFAKE",
+    "VERCEL_PROJECT_ID": "prj_FAKEproject"
+  },
+  "responses": [
+    {
+      "match": "/v9/projects/prj_FAKEproject/env?decrypt=true",
+      "status": 200,
+      "body": {
+        "envs": [
+          { "id": "1", "key": "STRIPE_SECRET_KEY", "value": "sk_live_FAKEFAKEFAKEFAKEFAKEFAKEFAKE", "type": "encrypted", "target": ["production"] },
+          { "id": "2", "key": "STRIPE_SECRET_KEY", "value": "sk_test_FAKEFAKEFAKEFAKEFAKEFAKEFAKE", "type": "encrypted", "target": ["preview", "development"] },
+          { "id": "3", "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY", "value": "eyJFAKE.eyJFAKE.FAKE", "type": "plain", "target": ["production", "preview", "development"] },
+          { "id": "4", "key": "SUPABASE_SERVICE_KEY", "type": "sensitive", "target": ["production"] }
+        ]
+      }
+    }
+  ],
+  "expect": "pass"
+}

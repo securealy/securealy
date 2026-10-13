@@ -1,0 +1,19 @@
+{
+  "env": {
+    "STRIPE_SECRET_KEY": "sk_live_FAKEFAKEFAKEFAKEFAKEFAKEFAKE",
+    "SECUREALY_PRODUCTION_URL": "https://app.example"
+  },
+  "responses": [
+    {
+      "match": "api.stripe.com/v1/webhook_endpoints",
+      "status": 200,
+      "body": {
+        "object": "list",
+        "data": [
+          { "id": "we_FAKE1", "url": "https://app.example/api/stripe/webhook", "status": "enabled", "enabled_events": ["checkout.session.completed", "invoice.paid", "customer.subscription.deleted"] }
+        ]
+      }
+    }
+  ],
+  "expect": "pass"
+}

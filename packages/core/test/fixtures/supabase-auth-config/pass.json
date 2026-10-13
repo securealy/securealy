@@ -1,0 +1,23 @@
+{
+  "env": {
+    "SUPABASE_MGMT_TOKEN": "sbp_FAKEmanagementTokenFAKEmanagementToken",
+    "SUPABASE_PROJECT_REF": "abcdefghijklmnopqrst"
+  },
+  "responses": [
+    {
+      "match": "/v1/projects/abcdefghijklmnopqrst/config/auth",
+      "status": 200,
+      "body": {
+        "disable_signup": false,
+        "external_anonymous_users_enabled": false,
+        "password_min_length": 12,
+        "mailer_otp_exp": 3600,
+        "uri_allow_list": "https://app.example/**,https://app.example/auth/callback",
+        "site_url": "https://app.example",
+        "security_captcha_enabled": true,
+        "mailer_autoconfirm": false
+      }
+    }
+  ],
+  "expect": "pass"
+}

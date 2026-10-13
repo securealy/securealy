@@ -1,0 +1,8 @@
+{
+  "git": true,
+  "files": {
+    "src/index.js": "export const hello = () => 'hi';\n",
+    ".gitignore": ".env*\n"
+  },
+  "expect": "pass"
+}

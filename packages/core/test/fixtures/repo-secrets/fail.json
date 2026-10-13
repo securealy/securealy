@@ -1,0 +1,8 @@
+{
+  "git": true,
+  "files": {
+    "src/config.js": "export const stripe = require('stripe')('sk_live_FAKEFAKEFAKEFAKEFAKEFAKE');\n",
+    ".gitignore": ".env*\n"
+  },
+  "expect": "fail"
+}

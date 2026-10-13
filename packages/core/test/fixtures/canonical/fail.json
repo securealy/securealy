@@ -1,0 +1,335 @@
+{
+  "input": "https://goodapp.example/",
+  "host": "goodapp.example",
+  "apex": "goodapp.example",
+  "platformSuffix": null,
+  "tier": "passive",
+  "startedAt": "2026-10-12T00:00:00.000Z",
+  "dns": {
+    "ns": [
+      "ada.ns.cloudflare.com",
+      "bob.ns.cloudflare.com"
+    ],
+    "a": {
+      "apex": [
+        "203.0.113.10"
+      ],
+      "www": [
+        "203.0.113.10"
+      ],
+      "host": [
+        "203.0.113.10"
+      ]
+    },
+    "aaaa": {
+      "apex": [],
+      "www": [],
+      "host": []
+    },
+    "cname": [],
+    "mx": [
+      {
+        "exchange": "mx1.mail.example",
+        "priority": 10
+      }
+    ],
+    "txt": [
+      "v=spf1 include:_spf.mail.example -all"
+    ],
+    "dmarc": [
+      "v=DMARC1; p=reject; rua=mailto:dmarc@goodapp.example"
+    ],
+    "dkim": {
+      "resend": "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAFAKEFAKEFAKEFAKEFAKE",
+      "google": null,
+      "default": null,
+      "k1": null,
+      "selector1": null,
+      "s1": null
+    },
+    "caa": [
+      "issue \"letsencrypt.org\""
+    ],
+    "dnssec": true,
+    "securealyTxt": [],
+    "errors": {}
+  },
+  "rdap": {
+    "expires": "2028-10-12T00:00:00Z",
+    "registrar": "Example Registrar"
+  },
+  "tls": {
+    "connected": true,
+    "authorized": true,
+    "hostMatches": true,
+    "validFrom": "2026-09-01T00:00:00.000Z",
+    "validTo": "2026-11-30T00:00:00.000Z",
+    "daysRemaining": 49,
+    "sans": [
+      "goodapp.example",
+      "www.goodapp.example"
+    ],
+    "issuer": "Let's Encrypt",
+    "subject": "goodapp.example"
+  },
+  "page": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/html; charset=utf-8",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "content-security-policy": "default-src 'self'; script-src 'self' https://plausible.io; frame-ancestors 'none'; form-action 'self'",
+      "x-frame-options": "DENY",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "server": "Vercel",
+      "x-vercel-id": "sfo1::abc12-1700000000000-0123456789ab",
+      "content-length": "1074"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 1074,
+    "contentLength": 1074,
+    "ttfbMs": 180,
+    "totalMs": 260,
+    "url": "https://goodapp.example/",
+    "body": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>GoodApp: invoices for freelancers, done in minutes</title><meta name=\"description\" content=\"GoodApp helps freelancers send invoices, track payments and get paid faster. Start free, upgrade when you grow, cancel any time.\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"/favicon.ico\"><meta property=\"og:image\" content=\"https://goodapp.example/og.png\"><meta property=\"og:image:width\" content=\"1200\"><meta property=\"og:image:height\" content=\"630\"><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"Organization\",\"name\":\"GoodApp\"}</script><script src=\"https://plausible.io/js/script.js\" defer data-domain=\"goodapp.example\"></script><script type=\"module\" src=\"/assets/index-abc123.js\"></script></head><body><h1>Invoices for freelancers</h1><p>Send invoices and get paid without chasing anyone.</p><img src=\"/hero.png\" alt=\"\"><a href=\"/pricing\">Pricing</a><a href=\"/privacy\">Privacy policy</a><a href=\"/terms\">Terms of service</a></body></html>",
+    "bodyHint": "html"
+  },
+  "finalUrl": "https://goodapp.example/",
+  "httpProbe": {
+    "method": "GET",
+    "status": 308,
+    "headers": {
+      "location": "https://goodapp.example/"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 0,
+    "contentLength": null,
+    "ttfbMs": 20,
+    "totalMs": 20,
+    "url": "http://goodapp.example/"
+  },
+  "bundles": [
+    {
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "application/javascript"
+      },
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 57,
+      "contentLength": 57,
+      "ttfbMs": 40,
+      "totalMs": 60,
+      "url": "https://goodapp.example/assets/index-abc123.js",
+      "body": "import{a as e}from\"./vendor.js\";console.log(\"goodapp\",e);",
+      "bodyHint": "text"
+    }
+  ],
+  "sourceMaps": [],
+  "robots": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 198,
+    "contentLength": 198,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "https://goodapp.example/robots.txt",
+    "body": "User-agent: *\nAllow: /\nUser-agent: GPTBot\nAllow: /\nUser-agent: ClaudeBot\nAllow: /\nUser-agent: PerplexityBot\nAllow: /\nUser-agent: Google-Extended\nAllow: /\nSitemap: https://goodapp.example/sitemap.xml",
+    "bodyHint": "text"
+  },
+  "sitemap": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "application/xml"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 259,
+    "contentLength": 259,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "https://goodapp.example/sitemap.xml",
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"><url><loc>https://goodapp.example/</loc></url><url><loc>https://goodapp.example/pricing</loc></url><url><loc>https://goodapp.example/privacy</loc></url></urlset>",
+    "bodyHint": "xml"
+  },
+  "sitemapUrls": [
+    "https://goodapp.example/",
+    "https://goodapp.example/pricing",
+    "https://goodapp.example/privacy"
+  ],
+  "sitemapSamples": [
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/pricing"
+    },
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/privacy"
+    }
+  ],
+  "securityTxt": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 75,
+    "contentLength": 75,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "https://goodapp.example/.well-known/security.txt",
+    "body": "Contact: mailto:security@goodapp.example\nExpires: 2027-06-01T00:00:00.000Z\n",
+    "bodyHint": "text"
+  },
+  "llmsTxt": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 37,
+    "contentLength": 37,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "https://goodapp.example/llms.txt",
+    "body": "# GoodApp\n\nInvoices for freelancers.\n",
+    "bodyHint": "text"
+  },
+  "notFound": {
+    "path": "/sly-0123456789",
+    "record": {
+      "method": "GET",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html"
+      },
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 90,
+      "contentLength": 90,
+      "ttfbMs": 40,
+      "totalMs": 50,
+      "url": "https://goodapp.example/sly-0123456789",
+      "body": "<!doctype html><html><head><title>Not found</title></head><body><h1>404</h1></body></html>",
+      "bodyHint": "html"
+    }
+  },
+  "favicon": {
+    "method": "HEAD",
+    "status": 200,
+    "headers": {
+      "content-type": "image/x-icon"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 0,
+    "contentLength": 1500,
+    "ttfbMs": 30,
+    "totalMs": 30,
+    "url": "https://goodapp.example/favicon.ico"
+  },
+  "ogImage": {
+    "method": "HEAD",
+    "status": 200,
+    "headers": {
+      "content-type": "image/png"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 0,
+    "contentLength": 90000,
+    "ttfbMs": 30,
+    "totalMs": 30,
+    "url": "https://goodapp.example/og.png"
+  },
+  "linkSamples": [
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/privacy"
+    },
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/terms"
+    },
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/pricing"
+    }
+  ],
+  "imageSamples": [
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {
+        "content-type": "image/png"
+      },
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": 120000,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/hero.png"
+    }
+  ],
+  "supabase": null,
+  "firebase": null,
+  "verified": null,
+  "requests": 18,
+  "log": []
+}
