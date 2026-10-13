@@ -1,0 +1,102 @@
+name: Securealy launch grade
+description: Grade a URL the way an attacker and a customer would see it, write the result to the job summary, and fail the job below a minimum grade.
+author: Securealy
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  url:
+    description: The URL to grade, for example the preview deployment or the production site.
+    required: true
+  min-grade:
+    description: Fail the job when the grade is below this letter (A, B, C, D or F).
+    required: false
+    default: C
+  tier:
+    description: passive (any URL) or verified (needs token and a domain verified at securealy.com).
+    required: false
+    default: passive
+  token:
+    description: Securealy project token (sly_...). Required for tier verified. Pass it from a secret.
+    required: false
+    default: ''
+  bypass-token:
+    description: Vercel protection bypass token for a protected preview deployment. Sent only to the graded host.
+    required: false
+    default: ''
+  version:
+    description: The securealy CLI version to run through npx.
+    required: false
+    default: 0.1.0
+  artifact-name:
+    description: Name of the uploaded artifact that holds the GradeResult JSON.
+    required: false
+    default: securealy-grade
+
+outputs:
+  grade:
+    description: The letter grade.
+    value: ${{ steps.grade.outputs.grade }}
+  score:
+    description: The score out of 100.
+    value: ${{ steps.grade.outputs.score }}
+  passed:
+    description: true when the grade met min-grade.
+    value: ${{ steps.grade.outputs.passed }}
+  result-path:
+    description: Path to the GradeResult JSON file.
+    value: ${{ steps.grade.outputs.result-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Grade
+      id: grade
+      shell: bash
+      env:
+        SECUREALY_URL: ${{ inputs.url }}
+        SECUREALY_MIN_GRADE: ${{ inputs.min-grade }}
+        SECUREALY_TIER: ${{ inputs.tier }}
+        SECUREALY_TOKEN: ${{ inputs.token }}
+        SECUREALY_BYPASS: ${{ inputs.bypass-token }}
+        SECUREALY_VERSION: ${{ inputs.version }}
+      run: |
+        set +e
+        out="${RUNNER_TEMP}/securealy-grade.json"
+        args=(grade "$SECUREALY_URL" --json --min-grade "$SECUREALY_MIN_GRADE" --no-color)
+        if [ "$SECUREALY_TIER" = "verified" ]; then
+          if [ -z "$SECUREALY_TOKEN" ]; then echo "tier verified needs the token input" >&2; exit 2; fi
+          args+=(--tier verified --token "$SECUREALY_TOKEN")
+        fi
+        if [ -n "$SECUREALY_BYPASS" ]; then args+=(--bypass "$SECUREALY_BYPASS"); fi
+        npx -y "securealy@${SECUREALY_VERSION}" "${args[@]}" > "$out"
+        code=$?
+        set -e
+        echo "result-path=$out" >> "$GITHUB_OUTPUT"
+        if [ "$code" -gt 1 ]; then
+          echo "securealy exited with $code (opt-out, verification failure or a crash); see the log above" >&2
+          exit "$code"
+        fi
+        node "${{ github.action_path }}/summary.mjs" "$out" "$SECUREALY_MIN_GRADE" "$code" >> "$GITHUB_OUTPUT"
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+
+    - name: Upload GradeResult
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.grade.outputs.result-path }}
+        if-no-files-found: warn
+
+    - name: Enforce minimum grade
+      shell: bash
+      env:
+        GRADE: ${{ steps.grade.outputs.grade }}
+        MIN: ${{ inputs.min-grade }}
+        CODE: ${{ steps.grade.outputs.exit-code }}
+      run: |
+        if [ "$CODE" != "0" ]; then
+          echo "Grade $GRADE is below the minimum $MIN" >&2
+          exit 1
+        fi
+        echo "Grade $GRADE meets the minimum $MIN"
