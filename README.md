@@ -20,7 +20,7 @@ BLOCKERS
                              No secret keys in client JavaScript (blocker) -> https://securealy.com/checks/secrets-in-bundle
 ```
 
-This repository is the open-source engine: the check catalogue, the grading library, the CLI and the test fixtures. The hosted grader at [securealy.com](https://securealy.com) runs the same code.
+This repository is the open-source engine: the check catalogue, the grading library, the CLI, the MCP server, the Claude Code plugin, the GitHub Action and the test fixtures. The hosted grader at [securealy.com](https://securealy.com) runs the same code.
 
 ## What it checks
 
@@ -81,6 +81,47 @@ Add a TXT record `_securealy` with the value `optout`, or send an `X-Securealy: 
 
 Every request identifies itself as `SecurealyGrader/1.0 (+https://securealy.com/grader)`.
 
+## Using it from an agent
+
+The same checks are available to coding agents through the `securealy-mcp` server: `grade_url`, `scan_repo`, `check_rls`, `check_stripe`, `check_vercel_env`, `get_check`, `list_checks`, `fetch_fix` and `post_result`, plus the catalogue and this spec as resources. Every output is passed through a redactor.
+
+**Claude Code plugin** (adds the `/securealy:launch-check` skill and the server):
+
+```
+claude plugin marketplace add kennyhyder/securealy
+claude plugin install securealy@securealy
+```
+
+The marketplace is published from this repository. When the repository moves to the `securealy` organization the command becomes `claude plugin marketplace add securealy/securealy`; installed plugins keep working.
+
+**Claude Code, server only:**
+
+```
+claude mcp add securealy -- npx -y securealy-mcp
+```
+
+**Cursor:** [Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=securealy&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNlY3VyZWFseS1tY3AiXX0=), or add to `mcp.json`:
+
+```json
+{ "mcpServers": { "securealy": { "command": "npx", "args": ["-y", "securealy-mcp"] } } }
+```
+
+**VS Code:** [Install in VS Code](vscode:mcp/install?%7B%22name%22%3A%22securealy%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22securealy-mcp%22%5D%7D), or `code --add-mcp '{"name":"securealy","command":"npx","args":["-y","securealy-mcp"]}'`.
+
+**Codex:**
+
+```
+codex mcp add securealy -- npx -y securealy-mcp
+```
+
+**Any other MCP client:** run `npx -y securealy-mcp` over stdio. The server is listed in the MCP Registry as `com.securealy/mcp`.
+
+**Agent skills:** the `launch-check` skill in `skills/` follows the Agent Skills format, so `npx skills add kennyhyder/securealy` installs it into any compatible agent.
+
+### What leaves your machine
+
+The passive grade sends requests only to the URL being graded (what a browser would request, at most 25) plus DNS, TLS and RDAP lookups for its domain; nothing goes to Securealy. The verified grade sends the URL and your project token to securealy.com. `fetch_fix` sends a check id to securealy.com. `post_result` sends a result and your token to securealy.com, and only when you ask. The repository scan reads the folder you confirm and sends nothing. The Supabase, Stripe and Vercel checks read their credentials from your environment, send each one only to the service it belongs to, and never print them.
+
 ## Using it in CI
 
 ```
@@ -88,6 +129,23 @@ npx securealy grade https://your-app.com --min-grade B
 ```
 
 exits 1 when the grade is below the minimum (default C), so a deploy step can gate on it. `--json` prints the full `GradeResult` described in [SPEC.md](SPEC.md).
+
+**GitHub Action:** grades a URL, writes the grade stamp and the failing checks to the job summary, uploads the JSON as an artifact, and fails the job below `min-grade`.
+
+```yaml
+permissions:
+  contents: read
+steps:
+  - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+    with:
+      node-version: 22
+  - uses: kennyhyder/securealy/packages/action@v0.1.0
+    with:
+      url: https://your-app.vercel.app
+      min-grade: B
+```
+
+Inputs, outputs and the verified-tier form are in [packages/action/README.md](packages/action/README.md).
 
 ## Using the engine directly
 
@@ -119,6 +177,10 @@ Each category exists because of a kind of incident that keeps happening to apps 
 packages/checks   the catalogue (checks.json), the source of truth for every check id
 packages/core     the engine: fetcher, 58 remote check modules, 7 local checks, scoring
 packages/cli      the securealy command
+packages/mcp      the securealy-mcp server (stdio) for agents
+packages/action   the GitHub Action
+plugin/           the Claude Code plugin (skill + server); .claude-plugin/marketplace.json at the root lists it
+skills/           the launch-check skill in Agent Skills layout
 ```
 
 ## Development
@@ -129,7 +191,11 @@ npm run build
 npm test            # vitest: a pass/fail fixture pair per check, scoring, redaction, opt-out
 LIVE=1 npm test     # also grades https://example.com for real
 npm run lint
+npm run smoke       # starts the MCP server over stdio and lists its tools
+npm run sweep       # fails on any credential-shaped string or foreign hostname in tracked files
 ```
+
+Releases, registry and directory submissions: [docs/publishing.md](docs/publishing.md).
 
 New checks start in `checks.json`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 

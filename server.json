@@ -1,0 +1,76 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.securealy/mcp",
+  "title": "Securealy",
+  "description": "Grade a URL as an attacker and a customer would see it; scan a repo; check Supabase, Stripe, Vercel.",
+  "version": "0.1.0",
+  "websiteUrl": "https://securealy.com",
+  "repository": {
+    "url": "https://github.com/kennyhyder/securealy",
+    "source": "github",
+    "subfolder": "packages/mcp"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "securealy-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SUPABASE_URL",
+          "description": "Optional. Your Supabase project URL, read by check_rls. Sent only to that project.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "SUPABASE_SERVICE_KEY",
+          "description": "Optional. Service role key for check_rls. Sent only to your Supabase project, never printed.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SUPABASE_MGMT_TOKEN",
+          "description": "Optional. Supabase management token for check_rls and the auth config check. Sent only to the Supabase management API.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SUPABASE_PROJECT_REF",
+          "description": "Optional. Supabase project ref, used with SUPABASE_MGMT_TOKEN.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "description": "Optional. Stripe secret key for check_stripe. Sent only to api.stripe.com, never printed.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "VERCEL_TOKEN",
+          "description": "Optional. Project-scoped Vercel token for check_vercel_env. Sent only to api.vercel.com, never printed.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "VERCEL_PROJECT_ID",
+          "description": "Optional. Vercel project id for check_vercel_env.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

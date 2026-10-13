@@ -1,0 +1,49 @@
+name: Release
+
+# Publishes securealy-checks, securealy-core, securealy and securealy-mcp to npm
+# with provenance on a version tag. Authentication is npm trusted publishing
+# (GitHub OIDC); there is no npm token anywhere in this repository or its secrets.
+# Each package must have this workflow registered as its trusted publisher first:
+# see docs/publishing.md.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: npm supports trusted publishing (needs 11.5.1 or later)
+        run: npm --version
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run lint
+      - name: Tag matches the package versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for p in packages/checks packages/core packages/cli packages/mcp; do
+            v=$(node -p "require('./$p/package.json').version")
+            if [ "$v" != "$tag" ]; then echo "$p is $v but the tag is $tag" >&2; exit 1; fi
+          done
+          v=$(node -p "JSON.parse(require('fs').readFileSync('plugin/.mcp.json','utf8')).mcpServers.securealy.args.at(-1)")
+          if [ "$v" != "securealy-mcp@$tag" ]; then echo "plugin/.mcp.json pins $v, expected securealy-mcp@$tag" >&2; exit 1; fi
+      - name: Publish securealy-checks
+        run: npm publish --workspace packages/checks --access public
+      - name: Publish securealy-core
+        run: npm publish --workspace packages/core --access public
+      - name: Publish securealy
+        run: npm publish --workspace packages/cli --access public
+      - name: Publish securealy-mcp
+        run: npm publish --workspace packages/mcp --access public
