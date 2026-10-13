@@ -86,3 +86,15 @@ Secrets discipline: every env read is trimmed; no secret is ever printed, logged
 - `GET https://securealy.com/api/grade/:id` → GradeResult.
 - `GET https://securealy.com/checks/:id.json` → the catalogue entry plus the fix text the caller is entitled to.
 - `POST https://securealy.com/api/results` (Bearer token) → store a local-tier result against a project.
+
+## Ownership verification value
+
+The owner never publishes the `sly_` token itself. The published value is a fingerprint: the first 32 hex characters of SHA-256 over the trimmed token. For token `t`, each option carries `securealy-verify=<fingerprint>` (DNS TXT at `_securealy.<host>`, the meta tag `securealy-verify` whose content is the bare fingerprint, or a line in `/.well-known/securealy.txt`). The engine computes the same fingerprint from `verifyToken` and compares; a mismatch throws `VerificationError` and no verified probe is made.
+
+## Budgets
+
+Passive: at most 25 HTTP requests (redirect hops, the RDAP lookup and the single Supabase REST request all count), 8 seconds per request, 3 redirects, 45 seconds overall. The verified tier gets 60 additional requests for its probes. `requests` in the result is the number actually made. `opts.maxRequests` and `opts.timeoutMs` override the defaults.
+
+## Errors
+
+`grade()` throws `OptOutError` when the host has opted out and `VerificationError` when the verified tier was requested but ownership could not be proven. Neither produces a GradeResult.
