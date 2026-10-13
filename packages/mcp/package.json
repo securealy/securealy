@@ -1,0 +1,48 @@
+{
+  "name": "securealy-mcp",
+  "version": "0.1.0",
+  "mcpName": "com.securealy/mcp",
+  "description": "Securealy MCP server: grade a URL, scan a repo and check Supabase, Stripe and Vercel from any MCP client",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "securealy-mcp": "./dist/bin.js"
+  },
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kennyhyder/securealy.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://securealy.com",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "security",
+    "launch-checklist",
+    "securealy"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('../../SPEC.md','dist/SPEC.md')\" && chmod +x dist/bin.js",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "securealy-core": "0.1.0",
+    "zod": "^3.25.0"
+  }
+}
