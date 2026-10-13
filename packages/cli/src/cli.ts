@@ -132,7 +132,7 @@ export async function main(argv: string[], io?: Io): Promise<number> {
       if (result.schema !== 1 || !Array.isArray(result.checks)) throw new Error(`${arg} is not a Securealy GradeResult`);
       const res = await fetch(`${API_BASE}/api/results`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'user-agent': 'securealy-cli/0.1.0' },
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'user-agent': 'securealy-cli/0.1.1' },
         body: JSON.stringify(result),
       });
       const text = await res.text();

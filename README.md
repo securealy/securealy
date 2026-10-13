@@ -195,7 +195,7 @@ npm run smoke       # starts the MCP server over stdio and lists its tools
 npm run sweep       # fails on any credential-shaped string or foreign hostname in tracked files
 ```
 
-Releases, registry and directory submissions: [docs/publishing.md](docs/publishing.md).
+Releases, registry and directory submissions: [docs/publishing.md](docs/publishing.md). What changed in each release: [CHANGELOG.md](CHANGELOG.md).
 
 New checks start in `checks.json`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 

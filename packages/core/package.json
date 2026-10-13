@@ -1,6 +1,6 @@
 {
   "name": "securealy-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Securealy grading engine: passive, verified and local checks for freshly launched apps",
   "license": "Apache-2.0",
   "type": "module",
@@ -29,6 +29,6 @@
   },
   "dependencies": {
     "htmlparser2": "^10.0.0",
-    "securealy-checks": "0.1.0"
+    "securealy-checks": "0.1.1"
   }
 }

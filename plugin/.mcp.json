@@ -2,7 +2,7 @@
   "mcpServers": {
     "securealy": {
       "command": "npx",
-      "args": ["-y", "securealy-mcp@0.1.0"]
+      "args": ["-y", "securealy-mcp@0.1.1"]
     }
   }
 }
