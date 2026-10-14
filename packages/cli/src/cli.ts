@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { grade, runLocal, verificationOptions, readTextCapped, OptOutError, VerificationError } from 'securealy-core';
+import { grade, runLocal, verificationOptions, readTextCapped, isPreLaunchInput, OptOutError, VerificationError } from 'securealy-core';
 import type { GradeResult } from 'securealy-core';
 import { API_BASE, meetsMinimum, parseGrade, renderReport, summaryLine } from './report.js';
 import { CLI_VERSION, recordRun } from './record.js';
@@ -11,6 +11,7 @@ const HELP = `securealy: grade a freshly launched app the way an attacker and a 
 
 Usage
   securealy grade <url> [--json] [--min-grade C] [--tier verified --token sly_...] [--bypass <vercel bypass token>] [--verbose]
+                                                   a localhost, 127.0.0.1, [::1], *.localhost or *.test URL gives a pre-launch grade
   securealy verify <domain> [--token sly_...]      print the three ownership-verification options
   securealy scan-repo [path]                       repo-secrets, gitignore-env-coverage, env-example-parity
   securealy check-rls                              rls-policies and supabase-auth-config from your env
@@ -116,12 +117,16 @@ export async function main(argv: string[], io?: Io): Promise<number> {
       if (!arg) throw new Error('grade needs a URL');
       const tier = values.tier === 'verified' ? 'verified' : 'passive';
       if (tier === 'verified' && !token) throw new Error('--tier verified needs --token sly_... (or SECUREALY_TOKEN in the environment)');
+      // Only the developer's own machine is let through the request-forgery guard, and the engine then allows loopback alone.
+      const preLaunch = isPreLaunchInput(arg);
+      if (preLaunch) o.err('pre-launch grade of a local address; checks that need a public domain are skipped');
       try {
         const r = await grade(arg, {
           tier,
           verifyToken: token,
           bypassToken: bypass,
           fetch: o.fetch,
+          allowPrivate: preLaunch || undefined,
           log: values.verbose ? (line) => o.err(`  ${line}`) : undefined,
         });
         return await emit(r, 'grade');

@@ -1,9 +1,11 @@
 import type { CheckModule } from './context.js';
-import { needPage, pathOf, result } from './context.js';
+import { beforeDeploy, needPage, pathOf, result } from './context.js';
 
 export const check: CheckModule = {
   id: 'stripe-test-key-in-prod',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'the publishable key in the deployed bundle (a test key is expected locally)');
+    if (local) return local;
     const gate = needPage(ctx, this.id);
     if (gate) return gate;
     const sources: { where: string; text: string }[] = [];

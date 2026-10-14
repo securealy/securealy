@@ -129,6 +129,8 @@ export interface Evidence {
   /** e.g. "vercel.app" when the host is a subdomain of a hosting platform */
   platformSuffix: string | null;
   tier: 'passive' | 'verified';
+  /** The input was a local address: no DNS, TLS, RDAP or plain-http probe was made. */
+  preLaunch?: boolean;
   startedAt: string;
   dns: DnsEvidence;
   rdap: RdapEvidence;

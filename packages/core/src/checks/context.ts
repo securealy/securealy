@@ -56,6 +56,15 @@ export function needPage(ctx: CheckContext, id: string, needHtml = true): CheckR
   return null;
 }
 
+/**
+ * Gate for a pre-launch grade: a check that can only be judged on the
+ * deployed site skips with what it needs, never fails or errors.
+ */
+export function beforeDeploy(ctx: CheckContext, id: string, needs: string): CheckResult | null {
+  if (!ctx.ev.preLaunch) return null;
+  return result(id, 'skip', `not applicable before deploy: ${needs}`);
+}
+
 /** Names the bot challenge in front of the site when the response headers identify one. */
 export function challengeNote(p: HttpRecord): string {
   const h = p.headers;

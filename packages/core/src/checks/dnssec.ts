@@ -1,9 +1,11 @@
 import type { CheckModule } from './context.js';
-import { result } from './context.js';
+import { beforeDeploy, result } from './context.js';
 
 export const check: CheckModule = {
   id: 'dnssec',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'a registered domain');
+    if (local) return local;
     if (ctx.ev.platformSuffix) return result(this.id, 'skip', `platform subdomain; the zone belongs to ${ctx.ev.platformSuffix}`);
     if (ctx.ev.dns.ns.length === 0 && ctx.ev.dns.a.apex.length === 0) return result(this.id, 'skip', `${ctx.ev.apex} does not resolve`);
     const d = ctx.ev.dns.dnssec;

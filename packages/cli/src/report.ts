@@ -42,7 +42,7 @@ export function renderReport(r: GradeResult, opts: ReportOptions = {}): string {
   const s = r.summary;
   const info = [
     `securealy  ${r.input}${r.finalUrl !== r.input ? `  ->  ${r.finalUrl}` : ''}`,
-    `Grade ${r.grade}  (${r.score}/100)   ${r.tier} tier   ${r.requests} request${r.requests === 1 ? '' : 's'}   ${fmtDuration(r.durationMs)}`,
+    `Grade ${r.grade}  (${r.score}/100)   ${r.preLaunch ? 'pre-launch, ' : ''}${r.tier} tier   ${r.requests} request${r.requests === 1 ? '' : 's'}   ${fmtDuration(r.durationMs)}`,
     `${s.blocker} blocker${s.blocker === 1 ? '' : 's'} . ${s.fail} fail . ${s.warn} warn . ${s.pass} pass . ${s.skip} skip . ${s.error} error`,
     r.capped ? `capped: ${r.capped}` : '',
     stackBits.length ? `stack: ${stackBits.join(' . ')}` : '',
@@ -87,7 +87,7 @@ export function renderReport(r: GradeResult, opts: ReportOptions = {}): string {
 
 /** A one-line JSON summary, handy for logs and CI output. */
 export function summaryLine(r: GradeResult): string {
-  return JSON.stringify({ grade: r.grade, score: r.score, capped: r.capped, summary: r.summary, requests: r.requests, durationMs: r.durationMs });
+  return JSON.stringify({ grade: r.grade, score: r.score, preLaunch: r.preLaunch, capped: r.capped, summary: r.summary, requests: r.requests, durationMs: r.durationMs });
 }
 
 export function meetsMinimum(grade: Grade, min: Grade): boolean {

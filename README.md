@@ -53,6 +53,19 @@ npx securealy check-vercel-env     # VERCEL_TOKEN + VERCEL_PROJECT_ID (+ SECUREA
 npx securealy local                # all of the above
 ```
 
+## Not deployed yet?
+
+An app that only runs on your machine still gets a grade:
+
+```
+npx securealy local                          # repo checks that need no URL at all
+npx securealy grade http://localhost:3000    # pre-launch grade of the running app
+```
+
+The second one is a **pre-launch grade**: the result carries `preLaunch: true`, the checks that need a public domain (TLS, HSTS, the https redirect, DNS, email, domain registration, the Stripe live key, server latency) are skipped with the reason, and the score covers the rest, so a clean local app can reach A. Blockers such as a secret in the bundle, a missing CSP and leaky cookies apply exactly as they will after launch. `localhost`, `127.0.0.1`, `[::1]`, `*.localhost` and `*.test` qualify, plain `http://` included; every other private address is refused as always.
+
+Then get to a real domain with Module 00 and Module 01 of the Fix Kit (or its `AUTOPILOT.md`), and run the same `grade` command on that URL for the real grade.
+
 Every environment variable is trimmed before use, sent only to the service it belongs to, and never printed. Evidence is redacted at the source: a found key shows as its first six characters and an ellipsis. The service key goes only to an https URL on a Supabase-hosted domain (`SECUREALY_SUPABASE_HOST_OVERRIDE=1` for a self-hosted project), and the Vercel check reads variable values only with `SECUREALY_VERCEL_DECRYPT=1`; without it the trailing-newline and live-key checks are reported as skipped. The full list of variables read and hosts contacted is under "What leaves your machine".
 
 ## The learning record

@@ -5,7 +5,7 @@ import { delimiter, resolve, sep } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { grade, runLocal, catalogue, catalogueEntry, OptOutError, VerificationError } from 'securealy-core';
+import { grade, runLocal, catalogue, catalogueEntry, isPreLaunchInput, OptOutError, VerificationError } from 'securealy-core';
 import type { Category, GradeResult, Resolver, Tier } from 'securealy-core';
 import { recordRun } from 'securealy/record';
 import type { RunCommand } from 'securealy/record';
@@ -145,11 +145,12 @@ export function createServer(opts: ServerOptions = {}): McpServer {
       description:
         'Grade a website the way an attacker and a customer would see it, in under a minute. ' +
         'Passive tier (default) runs locally in this process and only does what a browser does when a visitor opens the site, plus DNS and TLS lookups: at most 25 requests, no probing, no credential use; it works on any public URL, including preview deployments. ' +
+        'A URL on localhost, 127.0.0.1, [::1], *.localhost or *.test (plain http is fine) gives a pre-launch grade of the app running on this machine: the result carries preLaunch: true, checks that need a public domain (TLS, HSTS, DNS, email, domain, Stripe live key) are skipped with the reason, and the score covers the rest, so the same command on the deployed URL later gives the real grade. Any other private address is refused. ' +
         'Verified tier needs the project token (sly_...) for a domain whose ownership was already proven at securealy.com; it runs on the hosted grader and adds the probes an owner would want (served /.env or /.git, open admin routes, anon row reads, listable buckets, rate limiting). ' +
         'Returns a GradeResult (schema 1) and a text summary: grade A to F, score out of 100, blockers with evidence, then fails and warnings by category, each with its fix page. ' +
         'Pass bypassToken for a Vercel deployment that has protection enabled; it is sent only to that host. Evidence never contains a response body and secrets are redacted to six characters.',
       inputSchema: {
-        url: z.string().min(1).describe('The URL to grade, for example https://my-app.vercel.app. A bare hostname is treated as https.'),
+        url: z.string().min(1).describe('The URL to grade, for example https://my-app.vercel.app. A bare hostname is treated as https. http://localhost:3000 (or 127.0.0.1, [::1], *.localhost, *.test) gives a pre-launch grade of a local server.'),
         tier: z.enum(['passive', 'verified']).optional().describe('passive (default, works on any URL) or verified (needs token; domain must be verified at securealy.com).'),
         token: z.string().optional().describe('Securealy project token (sly_...). Required for tier verified. Sent only to securealy.com as a Bearer header.'),
         bypassToken: z.string().optional().describe('Vercel protection bypass token for a protected preview; sent only to the graded host as x-vercel-protection-bypass.'),
@@ -166,7 +167,9 @@ export function createServer(opts: ServerOptions = {}): McpServer {
           const r = await hostedGrade(url, t, api);
           return ok(resultText(r, 'mcp.grade_url'), r as unknown as Record<string, unknown>);
         }
-        const r = await grade(url, { tier: 'passive', bypassToken: bypassToken?.trim(), fetch: fetchImpl, dns: opts.dns, skipDnssec: opts.skipDnssec, allowPrivate: opts.allowPrivate, timeoutMs: opts.timeoutMs, log });
+        // The developer's own machine is let through the guard (loopback only); every other private address stays refused.
+        const allowPrivate = opts.allowPrivate || isPreLaunchInput(url) || undefined;
+        const r = await grade(url, { tier: 'passive', bypassToken: bypassToken?.trim(), fetch: fetchImpl, dns: opts.dns, skipDnssec: opts.skipDnssec, allowPrivate, timeoutMs: opts.timeoutMs, log });
         return ok(resultText(r, 'mcp.grade_url'), r as unknown as Record<string, unknown>);
       } catch (e) {
         if (e instanceof OptOutError) return fail(`This host has opted out of passive grading (${e.message}). Do not grade it; the owner can run the CLI locally instead.`);

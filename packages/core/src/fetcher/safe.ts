@@ -82,6 +82,38 @@ function parseV6(ip: string): number[] | null {
   return [...head, ...new Array<number>(missing).fill(0), ...tail];
 }
 
+function loopbackV4(o: number[]): boolean {
+  return o[0] === 127;
+}
+
+/** True only for loopback: the 127 loopback range, ::1, and the IPv6 forms that embed a 127.x address. */
+export function isLoopbackAddress(ip: string): boolean {
+  const v4 = parseV4(ip);
+  if (v4) return loopbackV4(v4);
+  const g = parseV6(ip);
+  if (!g) return false;
+  const [g0 = 0, g1 = 0, g2 = 0, g3 = 0, g4 = 0, g5 = 0, g6 = 0, g7 = 0] = g;
+  if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0 && g6 === 0 && g7 === 1) return true;
+  if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && (g5 === 0xffff || g5 === 0)) return loopbackV4([g6 >> 8, g6 & 0xff, g7 >> 8, g7 & 0xff]);
+  return false;
+}
+
+/** Names that only ever mean the developer's own machine: localhost, *.localhost (RFC 6761) and *.test (reserved for local use). */
+export function isLocalDevName(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/\.$/, '');
+  return h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.test');
+}
+
+/**
+ * A hostname the CLI and the MCP server grade as a pre-launch grade: a local
+ * dev name or a loopback literal. Nothing else private qualifies.
+ */
+export function isPreLaunchHost(hostname: string): boolean {
+  const h = hostname.replace(/^\[|\]$/g, '');
+  if (isLocalDevName(h)) return true;
+  return isIP(h) !== 0 && isLoopbackAddress(h);
+}
+
 function privateV4(o: number[]): boolean {
   const [a = 0, b = 0] = o;
   if (a === 0) return true; // this network
@@ -153,6 +185,12 @@ export interface HostGuardOptions {
   lookup?: Lookup;
   /** Tests only: let the engine fetch loopback and private addresses. */
   allowPrivate?: boolean;
+  /**
+   * Pre-launch grade of a local server: loopback names and addresses pass,
+   * and a name may only resolve to loopback. Every other private address,
+   * on the input or on a redirect, is refused exactly as without it.
+   */
+  allowLoopback?: boolean;
 }
 
 type LookupCallback = ((err: NodeJS.ErrnoException | null, address: string, family: number) => void) & ((err: NodeJS.ErrnoException | null, addresses: Address[]) => void);
@@ -175,6 +213,7 @@ export interface HostGuard {
 export function createHostGuard(opts: HostGuardOptions = {}): HostGuard {
   const lookupImpl = opts.lookup ?? defaultLookup;
   const allowPrivate = opts.allowPrivate === true;
+  const allowLoopback = opts.allowLoopback === true;
   const vetted = new Map<string, Promise<Address[]>>();
 
   const resolveVetted = (hostname: string): Promise<Address[]> => {
@@ -183,19 +222,26 @@ export function createHostGuard(opts: HostGuardOptions = {}): HostGuard {
     if (!p) {
       p = (async () => {
         const literal = literalReason(key);
-        if (literal && !allowPrivate) throw new UnsafeHostError(key, literal);
+        const loopbackName = allowLoopback && isPreLaunchHost(key);
+        if (literal && !allowPrivate && !loopbackName) throw new UnsafeHostError(key, literal);
         const bare = key.replace(/^\[|\]$/g, '');
         if (isIP(bare)) return [{ address: bare, family: isIP(bare) }];
         let rows: Address[];
         try {
           rows = await withTimeout(lookupImpl(bare), LOOKUP_TIMEOUT_MS);
         } catch (e) {
-          const code = (e as { code?: string }).code ?? (e as Error).message;
-          throw new UnsafeHostError(key, `did not resolve (${code})`);
+          // localhost and *.localhost are loopback by definition (RFC 6761); not every resolver says so.
+          if (loopbackName && /(^|\.)localhost$/.test(bare)) rows = [{ address: '127.0.0.1', family: 4 }, { address: '::1', family: 6 }];
+          else {
+            const code = (e as { code?: string }).code ?? (e as Error).message;
+            throw new UnsafeHostError(key, `did not resolve (${code})`);
+          }
         }
         if (rows.length === 0) throw new UnsafeHostError(key, 'did not resolve (no addresses)');
         if (!allowPrivate && rows.some((r) => isPrivateAddress(r.address))) {
-          throw new UnsafeHostError(key, 'resolves to a private, loopback, link-local or reserved address');
+          if (!(allowLoopback && rows.every((r) => isLoopbackAddress(r.address)))) {
+            throw new UnsafeHostError(key, 'resolves to a private, loopback, link-local or reserved address');
+          }
         }
         return rows;
       })();

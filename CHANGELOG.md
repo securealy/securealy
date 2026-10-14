@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Pre-launch grade.** `securealy grade http://localhost:3000` and `grade_url` on a local address (`localhost`, `*.localhost`, `*.test`, the 127 loopback range, `::1`; plain http accepted, a bare `localhost:3000` means http) grade the app running on this machine. The result carries `preLaunch: true` with `tier` still `passive`, the banner and the MCP summary say `pre-launch`, and the seventeen checks that need the deployed site (TLS, HSTS, the https redirect, SPF, DKIM, DMARC, MX, sender authentication, nameservers, DNSSEC, CAA, domain expiry, the Stripe live key, TTFB, source maps, page weight) skip with `not applicable before deploy: <what it needs>`, so the score covers the applicable checks and a clean local app can reach A. `cookie-flags` stops requiring `Secure` over plain http, `mixed-content` ignores the local server's own `http://` URLs, `canonical` expects the public URL, `og-image` skips when it names a public host that cannot answer yet. No DNS, TLS, RDAP or port-80 request is made for a local address, and the verified tier is refused for one.
+- **Guard unchanged for everything else.** The engine lets loopback through only for that grade (`allowLoopback` in the host guard): a redirect from the local app to a LAN or metadata address, a `*.test` name that resolves outside loopback, and every other private literal are refused exactly as before. The hosted grader never sets the option. No `--allow-private` flag was added.
+- The launch-check skill and the README gain a "Not deployed yet?" section: `npx securealy local`, then `npx securealy grade http://localhost:3000`, then Module 00 and 01 of the Fix Kit (or `AUTOPILOT.md`) to reach a real domain, where the same command gives the real grade.
+- Lockfile: two stale nested `securealy-checks@0.1.4` entries left by the 0.1.5 bump are gone.
+
 ## 0.1.4
 
 Security hardening of the engine, the local checks, the MCP server, the CLI and the Action. All four packages move to 0.1.4 (the engine changed).

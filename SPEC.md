@@ -8,6 +8,8 @@ Securealy grades a URL the way an attacker and a customer would see it, then sho
 - **verified**: only after the owner proves control (DNS TXT `_securealy`, meta tag `securealy-verify`, or `/.well-known/securealy.txt`). Adds the probes listed in the catalogue.
 - **local**: runs on the owner's machine through the CLI or MCP server with the owner's own credentials from their environment. Nothing leaves the machine except the result the owner chooses to post.
 
+Pre-launch grade: the CLI and the MCP server grade a URL on `localhost`, `*.localhost`, `*.test`, the 127 loopback range or `::1` (plain http included) as a passive grade of the app running on the developer's machine. The result carries `preLaunch: true` with `tier` still `passive`; the DNS, TLS, RDAP and plain-http probes are not made; the checks that need the deployed site (`tls-valid`, `tls-expiry`, `https-redirect`, `hsts`, `spf`, `dkim`, `dmarc`, `mx`, `auth-sender-authenticated`, `nameservers`, `dnssec`, `caa`, `domain-expiry`, `stripe-test-key-in-prod`, `ttfb`, `source-maps`, `page-weight`) return `skip` with evidence `not applicable before deploy: <what it needs>`; `cookie-flags` does not require `Secure` over plain http; `mixed-content` ignores the local server's own `http://` URLs; `canonical` passes when it names a public URL and warns when it names the local address; `og-image` skips when it names a public host that cannot answer yet. The score is computed over the applicable checks as usual. The verified tier is refused for a local address. The hosted grader never makes this exception.
+
 Opt-out: a TXT record `_securealy` with value `optout`, or a response header `X-Securealy: optout`, stops passive grading of that host. Honor it before any other request.
 
 User-Agent on every request: `SecurealyGrader/1.0 (+https://securealy.com/grader)`.
@@ -27,6 +29,7 @@ User-Agent on every request: `SecurealyGrader/1.0 (+https://securealy.com/grader
   "host": "example.com",
   "gradedAt": "2026-10-12T23:00:00Z",
   "tier": "passive",
+  "preLaunch": true,
   "grade": "C",
   "score": 64,
   "capped": "D or lower because of 1 blocker",
@@ -45,6 +48,8 @@ User-Agent on every request: `SecurealyGrader/1.0 (+https://securealy.com/grader
 }
 ```
 
+`preLaunch` is present (and `true`) only on a pre-launch grade of a local address; it is absent otherwise.
+
 Status values: `pass`, `fail`, `warn` (true but low confidence or partial), `skip` (not applicable, with evidence saying why), `error` (the check could not run). A check that cannot be judged from the evidence gathered returns `skip` with the reason, never `fail`; evidence always says what was looked for and what was found. `severity` is copied from the catalogue so a result is self-describing. Evidence is a short string, never a response body, and secrets in evidence are always redacted to a prefix plus an ellipsis.
 
 ## Scoring
@@ -54,7 +59,8 @@ Weights by severity: blocker 10, high 5, medium 3, low 1, info 0. Score = 100 ×
 ## Engine API (`packages/core`)
 
 ```ts
-grade(url: string, opts?: { tier?: 'passive' | 'verified', verifyToken?: string, bypassToken?: string, timeoutMs?: number, maxRequests?: number, fetch?: typeof fetch, dns?: Resolver, log?: (line: string) => void }): Promise<GradeResult>
+grade(url: string, opts?: { tier?: 'passive' | 'verified', verifyToken?: string, bypassToken?: string, timeoutMs?: number, maxRequests?: number, fetch?: typeof fetch, dns?: Resolver, log?: (line: string) => void, allowPrivate?: boolean }): Promise<GradeResult>
+isPreLaunchInput(input: string): boolean   // true for localhost, *.localhost, *.test, the 127 loopback range, ::1; the CLI and MCP pass allowPrivate only then
 runLocal(opts: { cwd: string, checks?: string[], env?: Record<string,string> }): Promise<GradeResult>   // tier 'local'
 catalogue(): Check[]
 score(checks: CheckResult[]): { grade, score, capped, summary }
@@ -93,7 +99,7 @@ The owner never publishes the `sly_` token itself. The published value is a fing
 
 ## Budgets
 
-Passive: at most 25 HTTP requests (redirect hops, the RDAP lookup, the single Supabase REST request and the one GET retry made when a HEAD answers 405 or 501 all count), 8 seconds per request, 3 redirects, 45 seconds overall. Every URL the engine fetches (the input, each redirect hop, every URL lifted from a page or bundle, and the TLS probe) must be http or https on a public address: `localhost`, `*.local`, `*.internal`, `*.home.arpa`, and any literal or resolved address in the loopback, link-local, RFC 1918, CGNAT, unique-local, multicast or reserved ranges (including the IPv6 forms that embed one) are refused without a request and without spending budget. The addresses that passed are the ones the socket connects to, so a record that changes between the check and the connect gains nothing. The verified tier gets 60 additional requests for its probes. `requests` in the result is the number actually made. `opts.maxRequests` and `opts.timeoutMs` override the defaults.
+Passive: at most 25 HTTP requests (redirect hops, the RDAP lookup, the single Supabase REST request and the one GET retry made when a HEAD answers 405 or 501 all count), 8 seconds per request, 3 redirects, 45 seconds overall. Every URL the engine fetches (the input, each redirect hop, every URL lifted from a page or bundle, and the TLS probe) must be http or https on a public address: `localhost`, `*.local`, `*.internal`, `*.home.arpa`, and any literal or resolved address in the loopback, link-local, RFC 1918, CGNAT, unique-local, multicast or reserved ranges (including the IPv6 forms that embed one) are refused without a request and without spending budget. The addresses that passed are the ones the socket connects to, so a record that changes between the check and the connect gains nothing. The CLI and the MCP server pass `allowPrivate` only when the input itself is a local address (see the pre-launch grade under Tiers), and the engine then allows loopback and nothing else: a redirect from the local app to a LAN or metadata address, or a `*.test` name that resolves outside loopback, is still refused. The verified tier gets 60 additional requests for its probes. `requests` in the result is the number actually made. `opts.maxRequests` and `opts.timeoutMs` override the defaults.
 
 ## Errors
 

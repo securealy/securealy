@@ -278,4 +278,42 @@ for (const entry of catalogue()) {
   writeFileSync(join(dir, 'fail.json'), JSON.stringify(fail, null, 2) + '\n');
   written += 2;
 }
+/**
+ * A pre-launch grade: the same app served by a local dev server at
+ * http://localhost:3000 before any domain exists. No DNS, TLS, RDAP or
+ * plain-http evidence; the canonical and og:image already name the public URL.
+ */
+function preLaunchBase(leaky = false) {
+  const ev = base();
+  const LOCAL = 'http://localhost:3000';
+  const relocate = (rec) => (rec ? { ...rec, url: rec.url.replace(ORIGIN, LOCAL) } : rec);
+  ev.input = `${LOCAL}/`;
+  ev.host = 'localhost';
+  ev.apex = 'localhost';
+  ev.preLaunch = true;
+  ev.finalUrl = `${LOCAL}/`;
+  // A dev server speaks plain http: no HSTS, no Secure on the session cookie, no host headers.
+  ev.page = relocate(page(html(), {}, { setCookie: [leaky ? 'session=abc123; Path=/; HttpOnly' : 'session=abc123; Path=/; HttpOnly; SameSite=Lax'] }));
+  for (const h of ['strict-transport-security', 'server', 'x-vercel-id', ...(leaky ? ['content-security-policy'] : [])]) delete ev.page.headers[h];
+  ev.httpProbe = null;
+  ev.bundles = [relocate(bundle(leaky ? `const stripe=require("stripe")("${FAKE_STRIPE_SECRET}");const pk="${FAKE_STRIPE_PUB_TEST}";${BUNDLE_BODY}` : BUNDLE_BODY))];
+  ev.sourceMaps = [];
+  ev.robots = relocate(ev.robots);
+  ev.sitemap = relocate(ev.sitemap);
+  ev.securityTxt = relocate(ev.securityTxt);
+  ev.llmsTxt = relocate(ev.llmsTxt);
+  ev.notFound = { path: ev.notFound.path, record: relocate(ev.notFound.record) };
+  ev.favicon = relocate(ev.favicon);
+  ev.linkSamples = ev.linkSamples.map(relocate);
+  ev.imageSamples = ev.imageSamples.map(relocate);
+  ev.dns = emptyEvidence(ev.input, ev.host, ev.apex).dns;
+  ev.rdap = { expires: null, skipped: 'pre-launch grade of a local address; no domain to look up' };
+  ev.tls = { connected: false, authorized: false, hostMatches: false, sans: [] };
+  ev.requests = 14;
+  return ev;
+}
+mkdirSync(join(FIXTURES, 'pre-launch'), { recursive: true });
+writeFileSync(join(FIXTURES, 'pre-launch', 'clean.json'), JSON.stringify(preLaunchBase(), null, 2) + '\n');
+writeFileSync(join(FIXTURES, 'pre-launch', 'leaky.json'), JSON.stringify(preLaunchBase(true), null, 2) + '\n');
+written += 2;
 console.log(`wrote ${written} fixtures under ${FIXTURES}`);

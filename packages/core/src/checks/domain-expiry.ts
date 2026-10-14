@@ -1,9 +1,11 @@
 import type { CheckModule } from './context.js';
-import { result } from './context.js';
+import { beforeDeploy, result } from './context.js';
 
 export const check: CheckModule = {
   id: 'domain-expiry',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'a registered domain');
+    if (local) return local;
     const r = ctx.ev.rdap;
     if (r.skipped) return result(this.id, 'skip', r.skipped);
     if (r.error === 'domain not found in RDAP') return result(this.id, 'fail', `${ctx.ev.apex} is not registered according to RDAP`);

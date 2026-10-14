@@ -18,7 +18,7 @@ claude plugin install securealy@securealy
 
 Everything runs on your machine through the published `securealy-mcp` npm package, which depends on `securealy-core` from the same repository.
 
-- `grade_url` in the passive tier sends requests only to the URL being graded (what a browser would request, at most 25 requests) plus DNS, TLS and RDAP lookups for its domain. Nothing goes to Securealy. Every address it fetches must be public: loopback, link-local, private, CGNAT, unique-local, multicast and reserved addresses, and names such as `localhost`, `*.local` and `*.internal`, are refused on the input, on every redirect and on every URL found in a page.
+- `grade_url` in the passive tier sends requests only to the URL being graded (what a browser would request, at most 25 requests) plus DNS, TLS and RDAP lookups for its domain. Nothing goes to Securealy. Every address it fetches must be public: link-local, private, CGNAT, unique-local, multicast and reserved addresses, and names such as `*.local` and `*.internal`, are refused on the input, on every redirect and on every URL found in a page. The one exception is the developer's own machine: a URL on `localhost`, `127.0.0.1`, `[::1]`, `*.localhost` or `*.test` gives a pre-launch grade (`preLaunch: true`, domain-dependent checks skipped with the reason), and for that grade loopback alone is allowed.
 - `grade_url` in the verified tier sends the URL and your project token to `https://securealy.com/api/grade`, because the probes it adds run on the hosted grader after you have proven you own the domain.
 - `fetch_fix` sends a check id to `https://securealy.com/checks/<id>.json`.
 - `post_result` sends a result and your project token to `https://securealy.com/api/results`, and only when you ask for it.

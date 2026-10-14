@@ -1,6 +1,7 @@
 import type { CheckModule } from './context.js';
 import { needPage, result } from './context.js';
 import { resolveUrl } from '../html.js';
+import { isPreLaunchHost } from '../fetcher/safe.js';
 
 function norm(u: string): string {
   try {
@@ -25,6 +26,11 @@ export const check: CheckModule = {
     const abs = resolveUrl(ctx.ev.finalUrl, href);
     if (!abs) return result(this.id, 'fail', `canonical href is not a URL: ${href.slice(0, 60)}`);
     if (!/^https?:\/\//i.test(href)) return result(this.id, 'warn', `canonical is relative (${href.slice(0, 60)}); use an absolute URL`);
+    if (ctx.ev.preLaunch) {
+      // The right canonical for a local build is the public URL it will live at; the local address is the one mistake to catch.
+      if (isPreLaunchHost(new URL(abs).hostname)) return result(this.id, 'warn', `canonical names the local address (${abs}); set it to the public URL before deploy`);
+      return result(this.id, 'pass', `canonical ${abs} (the public URL; judged against the deployed page after launch)`);
+    }
     if (norm(abs) === norm(ctx.ev.finalUrl)) return result(this.id, 'pass', `canonical ${abs}`);
     return result(this.id, 'warn', `canonical points elsewhere: ${abs} (page is ${ctx.ev.finalUrl})`);
   },

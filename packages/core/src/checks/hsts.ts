@@ -1,11 +1,13 @@
 import type { CheckModule } from './context.js';
-import { needPage, result } from './context.js';
+import { beforeDeploy, needPage, result } from './context.js';
 
 const SIX_MONTHS = 15_552_000;
 
 export const check: CheckModule = {
   id: 'hsts',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'https on the public hostname');
+    if (local) return local;
     const gate = needPage(ctx, this.id, false);
     if (gate) return gate;
     const h = ctx.header('strict-transport-security');

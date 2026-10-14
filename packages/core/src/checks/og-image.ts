@@ -1,6 +1,7 @@
 import type { CheckModule } from './context.js';
 import { describe, kb, needPage, result } from './context.js';
 import { meta } from '../html.js';
+import { isPreLaunchHost } from '../fetcher/safe.js';
 
 export const check: CheckModule = {
   id: 'og-image',
@@ -14,7 +15,16 @@ export const check: CheckModule = {
     if (!/^https?:\/\//i.test(raw.trim())) return result(this.id, 'fail', `og:image is not absolute: ${raw.slice(0, 60)}`);
     const rec = ctx.ev.ogImage;
     if (!rec) return result(this.id, 'skip', 'og:image was not fetched (request budget)');
-    if (rec.status === 0) return result(this.id, 'error', `og:image did not answer (${rec.error ?? 'unknown'}): ${raw.slice(0, 80)}`);
+    if (rec.status === 0) {
+      let publicHost = false;
+      try {
+        publicHost = !isPreLaunchHost(new URL(rec.url).hostname);
+      } catch {
+        /* keep the error below */
+      }
+      if (ctx.ev.preLaunch && publicHost) return result(this.id, 'skip', `not applicable before deploy: og:image ${raw.slice(0, 80)} must answer once the site is live (it did not: ${rec.error ?? 'unknown'})`);
+      return result(this.id, 'error', `og:image did not answer (${rec.error ?? 'unknown'}): ${raw.slice(0, 80)}`);
+    }
     // A 401 or 403 to the grader may be a bot gate that share crawlers pass; it is a finding only at low confidence.
     if (rec.status === 401 || rec.status === 403) return result(this.id, 'warn', `og:image answers ${rec.status} to the grader (${raw.slice(0, 80)}); if a bot gate is in front of it, allow share crawlers through`);
     if (rec.status !== 200) return result(this.id, 'fail', `og:image answers ${describe(rec)}: ${raw.slice(0, 80)}`);

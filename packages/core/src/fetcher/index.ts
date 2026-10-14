@@ -10,7 +10,7 @@ import { OptOutError, VerificationError, txtMatchesFingerprint, verificationFing
 import { fetch as undiciFetch } from 'undici';
 import { Budget, createClient } from './http.js';
 import type { HttpClient } from './http.js';
-import { createHostGuard } from './safe.js';
+import { createHostGuard, isPreLaunchHost } from './safe.js';
 import type { HostGuard } from './safe.js';
 import { defaultResolver, gatherDns, lookupSecurealyTxt } from './dns.js';
 import { gatherTls } from './tls.js';
@@ -259,10 +259,14 @@ async function gatherVerified(
 export async function gather(input: string, opts: GradeOptions = {}): Promise<Evidence> {
   const url = normalizeInput(input, { allowPrivate: opts.allowPrivate });
   const host = url.hostname.toLowerCase();
-  const apex = apexOf(host);
+  // A local address is a pre-launch grade: no domain to look up, and only loopback may be fetched.
+  const preLaunch = opts.allowPrivate === true && isPreLaunchHost(host);
+  const apex = preLaunch ? host : apexOf(host);
   const tier = opts.tier === 'verified' ? 'verified' : 'passive';
+  if (preLaunch && tier === 'verified') throw new Error(`the verified tier needs a public domain; ${host} is a local address (grade the deployed URL)`);
   const ev = emptyEvidence(url.toString(), host, apex);
   ev.tier = tier;
+  if (preLaunch) ev.preLaunch = true;
   ev.platformSuffix = platformSuffixOf(host);
   ev.startedAt = new Date().toISOString();
   const log = (line: string) => {
@@ -273,7 +277,7 @@ export async function gather(input: string, opts: GradeOptions = {}): Promise<Ev
   const budget = new Budget(maxRequests, Date.now() + (opts.timeoutMs ?? TOTAL_TIMEOUT_MS));
   // The engine's own fetch is undici's, so the guard's dispatcher is honored; an injected fetch (tests) still sees every check.
   const fetchImpl = opts.fetch ?? (undiciFetch as unknown as typeof fetch);
-  const guard = createHostGuard({ lookup: opts.lookup, allowPrivate: opts.allowPrivate });
+  const guard = createHostGuard({ lookup: opts.lookup, allowPrivate: opts.allowPrivate && !preLaunch, allowLoopback: preLaunch });
   const client = createClient(fetchImpl, budget, log, guard, { bypass: opts.bypassToken ? { host, token: opts.bypassToken } : null });
   const resolver = opts.dns ?? defaultResolver();
   try {
@@ -296,9 +300,10 @@ async function gatherWith(
   log: (line: string) => void,
 ): Promise<Evidence> {
   const tier = ev.tier;
+  const preLaunch = ev.preLaunch === true;
 
-  // 1. Opt-out first, before any request to the host.
-  const securealyTxt = await lookupSecurealyTxt(resolver, host, apex);
+  // 1. Opt-out first, before any request to the host. A local address has no owner but the person running the grade.
+  const securealyTxt = preLaunch ? [] : await lookupSecurealyTxt(resolver, host, apex);
   if (securealyTxt.some((v) => v.trim().toLowerCase() === 'optout')) throw new OptOutError(host, 'dns');
 
   // 2. The home page is the first HTTP request; its header can also opt out.
@@ -311,18 +316,23 @@ async function gatherWith(
   const base = ev.finalUrl;
   const finalHost = hostOf(base) ?? host;
 
-  // 3. DNS, TLS, RDAP and the plain-http probe in parallel.
-  const [dns, tls, rdap, httpProbe] = await Promise.all([
-    gatherDns(resolver, host, apex, { skipDnssec: opts.skipDnssec }),
-    gatherTls(host, guard),
-    gatherRdap(client, apex, ev.platformSuffix),
-    client.request(`http://${host}${url.pathname}`, { keepBytes: 0, follow: false }),
-  ]);
-  ev.dns = dns;
-  ev.dns.securealyTxt = uniq([...securealyTxt, ...dns.securealyTxt]);
-  ev.tls = tls;
-  ev.rdap = rdap;
-  ev.httpProbe = httpProbe.status === 0 && httpProbe.error ? httpProbe : httpProbe;
+  // 3. DNS, TLS, RDAP and the plain-http probe in parallel. None of them means anything for a local address.
+  if (preLaunch) {
+    ev.rdap = { expires: null, skipped: 'pre-launch grade of a local address; no domain to look up' };
+    log(`pre-launch grade of ${host}: DNS, TLS, RDAP and the plain-http probe are skipped`);
+  } else {
+    const [dns, tls, rdap, httpProbe] = await Promise.all([
+      gatherDns(resolver, host, apex, { skipDnssec: opts.skipDnssec }),
+      gatherTls(host, guard),
+      gatherRdap(client, apex, ev.platformSuffix),
+      client.request(`http://${host}${url.pathname}`, { keepBytes: 0, follow: false }),
+    ]);
+    ev.dns = dns;
+    ev.dns.securealyTxt = uniq([...securealyTxt, ...dns.securealyTxt]);
+    ev.tls = tls;
+    ev.rdap = rdap;
+    ev.httpProbe = httpProbe;
+  }
 
   if (ev.page === null) {
     ev.requests = budget.used;

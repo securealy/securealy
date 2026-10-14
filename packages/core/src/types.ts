@@ -80,6 +80,12 @@ export interface GradeResult {
   host: string;
   gradedAt: string;
   tier: Tier;
+  /**
+   * Set when the input was a local address (localhost, *.localhost, *.test,
+   * the 127 loopback range, ::1): a pre-launch grade. Checks that need the deployed
+   * site are skipped with the reason and the score covers the rest.
+   */
+  preLaunch?: boolean;
   grade: Grade;
   score: number;
   capped?: string;
@@ -115,10 +121,13 @@ export interface GradeOptions {
   /** Test hook: resolve a hostname for the request-forgery guard. Defaults to dns.lookup with every address. */
   lookup?: (hostname: string) => Promise<{ address: string; family: number }[]>;
   /**
-   * Tests only. The engine refuses to fetch loopback, link-local, private,
-   * CGNAT, unique-local, multicast and reserved addresses, and the names that
-   * mean them, on the input, every redirect and every URL found in a page.
-   * This switches that refusal off for a fixture server on 127.0.0.1.
+   * The engine refuses to fetch loopback, link-local, private, CGNAT,
+   * unique-local, multicast and reserved addresses, and the names that mean
+   * them, on the input, every redirect and every URL found in a page. The
+   * hosted grader never sets this. The CLI and the MCP server set it only
+   * when the input itself is a local address (see isPreLaunchInput), and the
+   * engine then allows loopback and nothing else: a pre-launch grade. With
+   * any other input it is the tests-only override for a fixture server.
    */
   allowPrivate?: boolean;
 }

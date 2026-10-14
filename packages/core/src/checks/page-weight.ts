@@ -1,11 +1,13 @@
 import type { CheckModule } from './context.js';
-import { kb, needPage, result } from './context.js';
+import { beforeDeploy, kb, needPage, result } from './context.js';
 
 const LIMIT = 2_000_000;
 
 export const check: CheckModule = {
   id: 'page-weight',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'the production build (a development server serves unminified bundles)');
+    if (local) return local;
     const gate = needPage(ctx, this.id, false);
     if (gate) return gate;
     const p = ctx.ev.page;

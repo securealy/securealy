@@ -21,7 +21,7 @@ You are running a launch check with Securealy. The tools come from the `secureal
 
 ## Steps
 
-1. Ask what they built and where it is, if you do not already know: the preview or live URL and the path to the repository. If the app is still only local, say that `grade_url` needs a reachable URL and offer `scan_repo` meanwhile.
+1. Ask what they built and where it is, if you do not already know: the preview or live URL and the path to the repository. If the app only runs on this machine, see "Not deployed yet?" below.
 
 2. Read `.securealy/history.json` in the working directory first, if it exists. Every earlier run is there: `at`, `command`, `tier`, `host` (URL grades only), `grade`, `score`, `summary` counts, `failed` check ids and `engineVersion`; never evidence. Before grading again, report the trend in one or two lines: the last grade and score for this host, when it was, and which checks were failing then. If the file is missing this is the first run; say nothing about it. Each run you make appends its own entry, and `grade_url` ends with a `Previous grade ...` line naming the checks that improved and regressed; repeat that line to the user.
 
@@ -40,6 +40,15 @@ You are running a launch check with Securealy. The tools come from the `secureal
 9. Once the user has deployed the changes, run `grade_url` again on the same URL and `scan_repo` again if the repo changed.
 
 10. Finish with one before/after line, for example `Grade D (58) -> Grade B (81), 2 blockers -> 0`, then what is still open and the single next action.
+
+## Not deployed yet?
+
+An app that only runs on localhost still gets a grade. Two commands, in this order:
+
+- `npx securealy local` in the repository: every local check that needs no URL at all (secrets in the working tree and git history, `.env` coverage, `.env.example` parity, and the Supabase, Stripe and Vercel checks when their variables are exported).
+- `npx securealy grade http://localhost:3000` (or `grade_url` with that URL): a pre-launch grade of the running app. The result carries `preLaunch: true`; the checks that need a public domain (TLS, HSTS, the https redirect, DNS, email, domain registration, the Stripe live key, server latency) are skipped with the reason, and the score covers the rest. Blockers such as a secret in the bundle, a missing CSP and leaky cookies apply exactly as they will after launch. `localhost`, `127.0.0.1`, `[::1]`, `*.localhost` and `*.test` qualify; nothing else private does.
+
+Then get to a real domain: Module 00 (domain and hosting) and Module 01 (deploy) of the Fix Kit, or the kit's `AUTOPILOT.md` for the whole path in one sitting. Once the app answers on its domain, the same `grade` command on that URL gives the real grade, and the pre-launch findings you fixed stay fixed.
 
 ## Reading a result
 

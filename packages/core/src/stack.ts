@@ -181,7 +181,8 @@ export function detectStack(ev: Evidence, page: ParsedPage | null): Stack {
   const t = texts(ev, page);
   const headers = ev.page?.headers ?? {};
   const stack: Stack = {};
-  const host = detectHost(ev);
+  // A local server's headers say nothing about where the site will be hosted.
+  const host = ev.preLaunch ? undefined : detectHost(ev);
   if (host) stack.host = host;
   const dns = detectDnsProvider(ev.dns.ns);
   if (dns) stack.dns = dns;

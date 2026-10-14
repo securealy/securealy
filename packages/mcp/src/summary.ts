@@ -13,7 +13,8 @@ export function summarize(r: GradeResult): string {
   const entries = new Map(catalogue().map((c) => [c.id, c]));
   const s = r.summary;
   const lines: string[] = [];
-  lines.push(`Grade ${r.grade} (${r.score}/100), ${r.tier} tier, ${r.input}${r.finalUrl && r.finalUrl !== r.input ? ` -> ${r.finalUrl}` : ''}`);
+  lines.push(`Grade ${r.grade} (${r.score}/100), ${r.preLaunch ? 'pre-launch, ' : ''}${r.tier} tier, ${r.input}${r.finalUrl && r.finalUrl !== r.input ? ` -> ${r.finalUrl}` : ''}`);
+  if (r.preLaunch) lines.push('pre-launch grade of a local address; checks that need a public domain are skipped');
   lines.push(`${s.blocker} blocker, ${s.fail} fail, ${s.warn} warn, ${s.pass} pass, ${s.skip} skip, ${s.error} error; ${r.requests} requests, ${r.durationMs} ms`);
   if (r.capped) lines.push(`Capped: ${r.capped}`);
   const stackBits = Object.entries(r.stack)

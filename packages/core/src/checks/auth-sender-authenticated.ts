@@ -1,10 +1,12 @@
 import type { CheckModule } from './context.js';
-import { result } from './context.js';
+import { beforeDeploy, result } from './context.js';
 import { dkimSelectors, dmarcRecord, noSendingExpected, spfRecords } from './mail.js';
 
 export const check: CheckModule = {
   id: 'auth-sender-authenticated',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'DNS records on the sending domain');
+    if (local) return local;
     const gate = noSendingExpected(ctx, this.id);
     if (gate) return gate;
     const selectors = dkimSelectors(ctx);

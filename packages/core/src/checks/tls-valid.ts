@@ -1,9 +1,11 @@
 import type { CheckModule } from './context.js';
-import { result } from './context.js';
+import { beforeDeploy, result } from './context.js';
 
 export const check: CheckModule = {
   id: 'tls-valid',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'a TLS certificate on the public hostname');
+    if (local) return local;
     const t = ctx.ev.tls;
     if (!t.connected) return result(this.id, 'fail', `no TLS connection to ${ctx.ev.host}:443 (${t.error ?? 'unknown error'})`);
     if (t.authorized && t.hostMatches) {

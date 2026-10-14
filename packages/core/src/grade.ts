@@ -47,6 +47,7 @@ export function assemble(ev: Evidence, checks: CheckResult[], stack: GradeResult
     requests: ev.requests,
     durationMs,
   };
+  if (ev.preLaunch) out.preLaunch = true;
   if (s.capped) out.capped = s.capped;
   return out;
 }

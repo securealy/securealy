@@ -1,4 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, it, expect, afterAll } from 'vitest';
 import type { GradeResult } from 'securealy-core';
 import { renderReport, meetsMinimum, parseGrade, summaryLine } from '../src/report.js';
 import { main } from '../src/cli.js';
@@ -27,6 +32,75 @@ const sample: GradeResult = {
   requests: 19,
   durationMs: 4120,
 };
+
+describe('grade of a local server', () => {
+  const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Local app under test before launch</title><meta name="description" content="A page served from this machine so the CLI can grade it before any domain exists.">
+<link rel="canonical" href="https://local-app.example/"><script type="module" src="/app.js"></script></head>
+<body><h1>Local app</h1><a href="/privacy">Privacy</a><a href="/terms">Terms</a></body></html>`;
+  const HEADERS = {
+    'content-security-policy': "default-src 'self'; frame-ancestors 'none'; form-action 'self'",
+    'strict-transport-security': 'max-age=31536000',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer',
+    'permissions-policy': 'camera=()',
+  };
+  let http: Server | undefined;
+  const dirs: string[] = [];
+  afterAll(async () => {
+    if (http) await new Promise<void>((r) => http!.close(() => r()));
+    for (const d of dirs) rmSync(d, { recursive: true, force: true });
+  });
+  const serve = async (): Promise<string> => {
+    http = createServer((req, res) => {
+      if (req.url === '/') {
+        res.writeHead(200, { ...HEADERS, 'content-type': 'text/html; charset=utf-8' });
+        return res.end(PAGE);
+      }
+      if (req.url === '/app.js') {
+        res.writeHead(200, { ...HEADERS, 'content-type': 'application/javascript' });
+        return res.end('console.log("local");');
+      }
+      res.writeHead(req.url === '/privacy' || req.url === '/terms' ? 200 : 404, { ...HEADERS, 'content-type': 'text/plain' });
+      res.end('x');
+    });
+    await new Promise<void>((r) => http!.listen(0, '127.0.0.1', r));
+    const addr = http.address();
+    return typeof addr === 'object' && addr ? `http://127.0.0.1:${addr.port}` : '';
+  };
+  const io = () => {
+    const out: string[] = [];
+    const err: string[] = [];
+    const cwd = mkdtempSync(join(tmpdir(), 'securealy-cli-'));
+    dirs.push(cwd);
+    return { out, err, io: { out: (s: string) => out.push(s), err: (s: string) => err.push(s), color: false, cwd, env: {} as Record<string, string> } };
+  };
+
+  it('grades a loopback URL as a pre-launch grade and says so once', async () => {
+    const url = await serve();
+    const { out, err, io: o } = io();
+    const code = await main(['grade', url, '--no-history', '--min-grade', 'F'], o);
+    expect(code).toBe(0);
+    expect(err).toContain('pre-launch grade of a local address; checks that need a public domain are skipped');
+    const text = out.join('\n');
+    expect(text).toMatch(/Grade [A-F] {2}\(\d+\/100\) {3}pre-launch, passive tier/);
+    expect(text).toContain('skip  hsts');
+    expect(text).toContain('not applicable before deploy: https on the public hostname');
+    expect(text).toContain('pass  csp');
+    expect(text).toContain('pass  canonical');
+    expect(JSON.parse(out[out.length - 1] ?? '{}').preLaunch).toBe(true);
+    // Nothing about a domain was asked for: no port-80 probe, no RDAP, no TLS.
+    expect(text).not.toContain('ERR ');
+  });
+
+  it('still refuses a private address that is not loopback', async () => {
+    const lan = [192, 168, 1, 20].join('.');
+    const { io: o } = io();
+    await expect(main(['grade', `http://${lan}:3000`, '--no-history'], o)).rejects.toThrow(/private, loopback, link-local or reserved/);
+    await expect(main(['grade', 'http://app.internal:3000', '--no-history'], o)).rejects.toThrow(/reserved for the local machine or network/);
+  });
+});
 
 describe('report', () => {
   it('renders the stamp, blockers first, then categories with evidence', () => {
@@ -90,6 +164,14 @@ describe('report', () => {
     const none = await run(['verify', 'app.example'], {});
     expect(none).toContain('Pass --token');
     await expect(main(['grade', 'https://app.example', '--tier', 'verified'], { out: () => {}, err: () => {}, color: false, env: {} })).rejects.toThrow(/SECUREALY_TOKEN/);
+  });
+
+  it('labels a pre-launch result in the banner and the summary line', () => {
+    const local: GradeResult = { ...sample, preLaunch: true, input: 'http://localhost:3000', finalUrl: 'http://localhost:3000/', host: 'localhost' };
+    expect(renderReport(local)).toContain('Grade D  (71/100)   pre-launch, passive tier');
+    expect(JSON.parse(summaryLine(local)).preLaunch).toBe(true);
+    expect(renderReport(sample)).toContain('Grade D  (71/100)   passive tier');
+    expect(JSON.parse(summaryLine(sample)).preLaunch).toBeUndefined();
   });
 
   it('prints help and exits 1 without a command', async () => {

@@ -1,9 +1,11 @@
 import type { CheckModule } from './context.js';
-import { result } from './context.js';
+import { beforeDeploy, result } from './context.js';
 
 export const check: CheckModule = {
   id: 'https-redirect',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'a plain-http listener on port 80 of the public hostname');
+    if (local) return local;
     const p = ctx.ev.httpProbe;
     if (!p) return result(this.id, 'skip', 'plain http was not probed');
     if (p.status === 0) {

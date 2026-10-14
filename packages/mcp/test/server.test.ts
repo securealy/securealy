@@ -141,13 +141,17 @@ describe('tools/list', () => {
 });
 
 describe('grade_url', () => {
-  it('grades a local fixture server passively, summarises it and redacts the bundle secret', async () => {
-    const { client } = await connect();
+  it('grades a local fixture server as a pre-launch grade, summarises it and redacts the bundle secret', async () => {
+    // The default test connection never relies on the tests-only override: the loopback input alone makes this a pre-launch grade.
+    const { client } = await connect({ allowPrivate: false });
     const r = await client.callTool({ name: 'grade_url', arguments: { url: base } });
     expect(r.isError).toBeFalsy();
     const t = text(r);
-    expect(t).toMatch(/^Grade [A-F] \(\d+\/100\), passive tier/);
+    expect(t).toMatch(/^Grade [A-F] \(\d+\/100\), pre-launch, passive tier/);
+    expect(t).toContain('pre-launch grade of a local address; checks that need a public domain are skipped');
     expect(t).toContain('GradeResult JSON:');
+    expect((r.structuredContent as { preLaunch?: boolean; tier: string }).preLaunch).toBe(true);
+    expect((r.structuredContent as { preLaunch?: boolean; tier: string }).tier).toBe('passive');
     const structured = r.structuredContent as { schema: number; checks: { id: string; status: string; evidence: string }[]; grade: string };
     expect(structured.schema).toBe(1);
     expect(structured.checks.length).toBeGreaterThan(40);
@@ -157,8 +161,20 @@ describe('grade_url', () => {
     expect(t).toContain('secrets-in-bundle');
     expect(t).not.toContain(FIXTURE_SECRET);
     expect(JSON.stringify(r)).not.toContain('4'.repeat(24));
+    // HSTS is sent by the fixture server but means nothing over plain http on a local address.
     const hsts = structured.checks.find((c) => c.id === 'hsts')!;
-    expect(hsts.status).toBe('pass');
+    expect(hsts.status).toBe('skip');
+    expect(hsts.evidence).toMatch(/^not applicable before deploy: /);
+    const csp = structured.checks.find((c) => c.id === 'csp')!;
+    expect(csp.status).toBe('fail');
+  });
+
+  it('refuses a private address that is not loopback, exactly as before', async () => {
+    const { client } = await connect({ allowPrivate: false });
+    const lan = [10, 0, 0, 5].join('.');
+    const r = await client.callTool({ name: 'grade_url', arguments: { url: `http://${lan}:3000` } });
+    expect(r.isError).toBe(true);
+    expect(text(r)).toMatch(/private, loopback, link-local or reserved/);
   });
 
   it('refuses verified without a token and surfaces the hosted API error text', async () => {

@@ -4,7 +4,7 @@
  * customers get a subdomain, which is where most freshly launched apps live.
  */
 
-import { literalReason, UnsafeHostError } from './fetcher/safe.js';
+import { isPreLaunchHost, literalReason, UnsafeHostError } from './fetcher/safe.js';
 
 const COUNTRY_SECOND_LEVEL = new Set([
   'co.uk', 'org.uk', 'ac.uk', 'gov.uk', 'me.uk', 'ltd.uk', 'plc.uk',
@@ -76,5 +76,22 @@ export function normalizeInput(input: string, opts: { allowPrivate?: boolean } =
     const reason = literalReason(u.hostname);
     if (reason) throw new UnsafeHostError(u.hostname, reason);
   }
+  // A local server has no TLS: a bare "localhost:3000" means http.
+  if (!scheme && opts.allowPrivate && isPreLaunchHost(u.hostname)) u.protocol = 'http:';
   return u;
+}
+
+/**
+ * True when the input names the developer's own machine (localhost,
+ * *.localhost, *.test, the 127 loopback range or ::1), which the CLI and the MCP server
+ * grade as a pre-launch grade. Anything that does not parse is false.
+ */
+export function isPreLaunchInput(input: string): boolean {
+  let s = input.trim();
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = `https://${s}`;
+  try {
+    return isPreLaunchHost(new URL(s).hostname);
+  } catch {
+    return false;
+  }
 }

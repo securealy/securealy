@@ -1,5 +1,5 @@
 import type { CheckModule } from './context.js';
-import { needPage, pathOf, result } from './context.js';
+import { beforeDeploy, needPage, pathOf, result } from './context.js';
 
 /** A map answered with HTML is the SPA fallback page, not a map. */
 function looksLikeMap(m: { status: number; headers: Record<string, string>; bodyHint?: string }): boolean {
@@ -12,6 +12,8 @@ function looksLikeMap(m: { status: number; headers: Record<string, string>; body
 export const check: CheckModule = {
   id: 'source-maps',
   run(ctx) {
+    const local = beforeDeploy(ctx, this.id, 'the production build (a development server serves source maps by design)');
+    if (local) return local;
     const gate = needPage(ctx, this.id);
     if (gate) return gate;
     const referenced = ctx.ev.bundles.filter((b) => b.body && /\/\/[#@]\s*sourceMappingURL=/.test(b.body.slice(-600)));

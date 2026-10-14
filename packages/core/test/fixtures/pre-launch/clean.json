@@ -1,0 +1,287 @@
+{
+  "input": "http://localhost:3000/",
+  "host": "localhost",
+  "apex": "localhost",
+  "platformSuffix": null,
+  "tier": "passive",
+  "startedAt": "2026-10-12T00:00:00.000Z",
+  "dns": {
+    "ns": [],
+    "a": {
+      "apex": [],
+      "www": [],
+      "host": []
+    },
+    "aaaa": {
+      "apex": [],
+      "www": [],
+      "host": []
+    },
+    "cname": [],
+    "mx": [],
+    "txt": [],
+    "dmarc": [],
+    "dkim": {},
+    "caa": [],
+    "dnssec": null,
+    "securealyTxt": [],
+    "errors": {}
+  },
+  "rdap": {
+    "expires": null,
+    "skipped": "pre-launch grade of a local address; no domain to look up"
+  },
+  "tls": {
+    "connected": false,
+    "authorized": false,
+    "hostMatches": false,
+    "sans": []
+  },
+  "page": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/html; charset=utf-8",
+      "content-security-policy": "default-src 'self'; script-src 'self' https://plausible.io; frame-ancestors 'none'; form-action 'self'",
+      "x-frame-options": "DENY",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "content-length": "1128"
+    },
+    "setCookie": [
+      "session=abc123; Path=/; HttpOnly; SameSite=Lax"
+    ],
+    "redirects": [],
+    "bytes": 1128,
+    "contentLength": 1128,
+    "ttfbMs": 180,
+    "totalMs": 260,
+    "url": "http://localhost:3000/",
+    "body": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>GoodApp: invoices for freelancers, done in minutes</title><meta name=\"description\" content=\"GoodApp helps freelancers send invoices, track payments and get paid faster. Start free, upgrade when you grow, cancel any time.\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"canonical\" href=\"https://goodapp.example/\"><link rel=\"icon\" href=\"/favicon.ico\"><meta property=\"og:image\" content=\"https://goodapp.example/og.png\"><meta property=\"og:image:width\" content=\"1200\"><meta property=\"og:image:height\" content=\"630\"><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"Organization\",\"name\":\"GoodApp\"}</script><script src=\"https://plausible.io/js/script.js\" defer data-domain=\"goodapp.example\"></script><script type=\"module\" src=\"/assets/index-abc123.js\"></script></head><body><h1>Invoices for freelancers</h1><p>Send invoices and get paid without chasing anyone.</p><img src=\"/hero.png\" alt=\"\"><a href=\"/pricing\">Pricing</a><a href=\"/privacy\">Privacy policy</a><a href=\"/terms\">Terms of service</a></body></html>",
+    "bodyHint": "html"
+  },
+  "finalUrl": "http://localhost:3000/",
+  "httpProbe": null,
+  "bundles": [
+    {
+      "method": "GET",
+      "status": 200,
+      "headers": {
+        "content-type": "application/javascript"
+      },
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 57,
+      "contentLength": 57,
+      "ttfbMs": 40,
+      "totalMs": 60,
+      "url": "http://localhost:3000/assets/index-abc123.js",
+      "body": "import{a as e}from\"./vendor.js\";console.log(\"goodapp\",e);",
+      "bodyHint": "text"
+    }
+  ],
+  "sourceMaps": [],
+  "robots": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 198,
+    "contentLength": 198,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "http://localhost:3000/robots.txt",
+    "body": "User-agent: *\nAllow: /\nUser-agent: GPTBot\nAllow: /\nUser-agent: ClaudeBot\nAllow: /\nUser-agent: PerplexityBot\nAllow: /\nUser-agent: Google-Extended\nAllow: /\nSitemap: https://goodapp.example/sitemap.xml",
+    "bodyHint": "text"
+  },
+  "sitemap": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "application/xml"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 259,
+    "contentLength": 259,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "http://localhost:3000/sitemap.xml",
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"><url><loc>https://goodapp.example/</loc></url><url><loc>https://goodapp.example/pricing</loc></url><url><loc>https://goodapp.example/privacy</loc></url></urlset>",
+    "bodyHint": "xml"
+  },
+  "sitemapUrls": [
+    "https://goodapp.example/",
+    "https://goodapp.example/pricing",
+    "https://goodapp.example/privacy"
+  ],
+  "sitemapSamples": [
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/pricing"
+    },
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "https://goodapp.example/privacy"
+    }
+  ],
+  "securityTxt": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 75,
+    "contentLength": 75,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "http://localhost:3000/.well-known/security.txt",
+    "body": "Contact: mailto:security@goodapp.example\nExpires: 2027-06-01T00:00:00.000Z\n",
+    "bodyHint": "text"
+  },
+  "llmsTxt": {
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 37,
+    "contentLength": 37,
+    "ttfbMs": 40,
+    "totalMs": 50,
+    "url": "http://localhost:3000/llms.txt",
+    "body": "# GoodApp\n\nInvoices for freelancers.\n",
+    "bodyHint": "text"
+  },
+  "notFound": {
+    "path": "/sly-0123456789",
+    "record": {
+      "method": "GET",
+      "status": 404,
+      "headers": {
+        "content-type": "text/html"
+      },
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 90,
+      "contentLength": 90,
+      "ttfbMs": 40,
+      "totalMs": 50,
+      "url": "http://localhost:3000/sly-0123456789",
+      "body": "<!doctype html><html><head><title>Not found</title></head><body><h1>404</h1></body></html>",
+      "bodyHint": "html"
+    }
+  },
+  "favicon": {
+    "method": "HEAD",
+    "status": 200,
+    "headers": {
+      "content-type": "image/x-icon"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 0,
+    "contentLength": 1500,
+    "ttfbMs": 30,
+    "totalMs": 30,
+    "url": "http://localhost:3000/favicon.ico"
+  },
+  "ogImage": {
+    "method": "HEAD",
+    "status": 200,
+    "headers": {
+      "content-type": "image/png"
+    },
+    "setCookie": [],
+    "redirects": [],
+    "bytes": 0,
+    "contentLength": 90000,
+    "ttfbMs": 30,
+    "totalMs": 30,
+    "url": "https://goodapp.example/og.png"
+  },
+  "linkSamples": [
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "http://localhost:3000/privacy"
+    },
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "http://localhost:3000/terms"
+    },
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {},
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": null,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "http://localhost:3000/pricing"
+    }
+  ],
+  "imageSamples": [
+    {
+      "method": "HEAD",
+      "status": 200,
+      "headers": {
+        "content-type": "image/png"
+      },
+      "setCookie": [],
+      "redirects": [],
+      "bytes": 0,
+      "contentLength": 120000,
+      "ttfbMs": 30,
+      "totalMs": 30,
+      "url": "http://localhost:3000/hero.png"
+    }
+  ],
+  "supabase": null,
+  "firebase": null,
+  "verified": null,
+  "requests": 14,
+  "log": [],
+  "preLaunch": true
+}
