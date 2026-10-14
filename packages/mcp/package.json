@@ -1,6 +1,6 @@
 {
   "name": "securealy-mcp",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "mcpName": "com.securealy/mcp",
   "description": "Securealy MCP server: grade a URL, scan a repo and check Supabase, Stripe and Vercel from any MCP client",
   "license": "Apache-2.0",
@@ -42,8 +42,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "securealy": "0.1.5",
-    "securealy-core": "0.1.5",
+    "securealy": "0.1.6",
+    "securealy-core": "0.1.6",
     "zod": "^3.25.0"
   }
 }

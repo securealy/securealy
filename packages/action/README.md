@@ -53,7 +53,7 @@ For a Vercel preview with deployment protection, add `bypass-token: ${{ secrets.
 | `tier` | `passive` | `passive` or `verified` |
 | `token` | | Project token, needed for `verified` |
 | `bypass-token` | | Vercel protection bypass token |
-| `version` | `0.1.5` | `securealy` CLI version run through npx. Caller-controlled: set it only from your own workflow file, never from an event payload |
+| `version` | `0.1.6` | `securealy` CLI version run through npx. Caller-controlled: set it only from your own workflow file, never from an event payload |
 | `artifact-name` | `securealy-grade` | Name of the uploaded JSON artifact |
 
 ## Outputs
