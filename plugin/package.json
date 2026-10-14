@@ -1,9 +1,9 @@
 {
   "name": "securealy-plugin",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Lockfile for the securealy-mcp launcher pinned in .mcp.json",
   "dependencies": {
-    "securealy-mcp": "0.1.4"
+    "securealy-mcp": "0.1.5"
   }
 }

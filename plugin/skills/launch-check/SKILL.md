@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Needs the securealy MCP server (bundled with this plugin, run with npx) and network access to the URL being graded.
 metadata:
   author: securealy
-  version: "0.1.4"
+  version: "0.1.5"
 ---
 
 # Launch check

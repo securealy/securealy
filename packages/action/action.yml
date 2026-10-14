@@ -28,7 +28,7 @@ inputs:
   version:
     description: The securealy CLI version to run through npx. Caller-controlled, so set it from your own workflow file only, never from an event payload or an untrusted input; the default is the version this Action was released with.
     required: false
-    default: 0.1.4
+    default: 0.1.5
   artifact-name:
     description: Name of the uploaded artifact that holds the GradeResult JSON.
     required: false

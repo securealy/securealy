@@ -3,7 +3,7 @@
   "name": "com.securealy/mcp",
   "title": "Securealy",
   "description": "Grade a URL as an attacker and a customer would see it; scan a repo; check Supabase, Stripe, Vercel.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "websiteUrl": "https://securealy.com",
   "repository": {
     "url": "https://github.com/securealy/securealy",
@@ -15,7 +15,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "securealy-mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

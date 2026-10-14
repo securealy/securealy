@@ -1,7 +1,7 @@
 {
   "name": "securealy-monorepo",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Securealy: launch grader for apps built with AI tools",
   "license": "Apache-2.0",
   "type": "module",
