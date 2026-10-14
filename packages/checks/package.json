@@ -1,6 +1,6 @@
 {
   "name": "securealy-checks",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "The Securealy check catalogue (source of truth for every check id)",
   "license": "Apache-2.0",
   "repository": {

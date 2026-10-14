@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.4
+
+Security hardening of the engine, the local checks, the MCP server, the CLI and the Action. All four packages move to 0.1.4 (the engine changed).
+
+- **Request-forgery guard.** Every URL the engine fetches (the input, each redirect hop, every URL lifted from a page or a bundle, and the TLS probe) must be http or https on a public address. `localhost`, `*.local`, `*.internal`, `*.home.arpa`, and any literal or resolved address in the loopback, link-local, RFC 1918, CGNAT, unique-local, multicast or reserved ranges (including the IPv6 forms that embed one) are refused before a socket opens, and a refused URL spends no request budget. The addresses that passed the check are the ones the socket connects to, so a DNS record that changes between check and connect gains nothing. The engine's own fetch is now undici's (pinned) with that dispatcher; the only way past the guard is the tests-only `allowPrivate` option. The redirect cap (3) and body cap (2 MB) are unchanged.
+- **`scan_repo` containment.** The MCP tool resolves the requested folder by real path and refuses anything outside the server's working directory unless `SECUREALY_SCAN_ROOTS` (folders separated by the OS path delimiter) lists an ancestor. Every git the local checks spawn now runs with `-c core.fsmonitor=false -c core.hooksPath=/dev/null`, so a scanned repository cannot execute code through its own configuration.
+- **`check_vercel_env` reads values only on request.** Decrypted variable values are fetched from api.vercel.com only when `SECUREALY_VERCEL_DECRYPT=1`; without it the name and target checks run and the trailing-newline and live-key checks are reported as skipped with the reason.
+- **Supabase service key goes only to Supabase.** `rls-policies` sends the key only to an https `SUPABASE_URL` on a Supabase-hosted domain and otherwise skips with the reason; `SECUREALY_SUPABASE_HOST_OVERRIDE=1` allows a self-hosted project.
+- **Tokens off the command line.** The CLI accepts `SECUREALY_TOKEN` and `SECUREALY_BYPASS` as equivalents of `--token` and `--bypass`. The Action passes both only through the environment, and `github.action_path` now reaches the script as `$ACTION_PATH`; the `version` input is documented as caller-controlled.
+- **Redactor.** The MCP server's redactor also learns the password inside any environment value that is a URL with userinfo (`DATABASE_URL`, `REDIS_URL`), raw and decoded, whatever the variable is called.
+- **Bounded reads.** Every answer from securealy.com (hosted grade, poll, fix fetch, result post, CLI `post`) is read under a byte cap (256 KiB) before any parsing.
+- **Disclosure.** README, plugin README and `server.json` list every environment variable the local checks read and every host the engine contacts. The stale notes about the repository move are gone.
+- **Sweep.** Accepts only the fixture Supabase host, adds shapes for Stripe webhook secrets, Supabase access tokens, Google API keys, npm tokens, live publishable keys, Cloudflare tokens and Vercel ids, and flags bare IPv4 literals (except the seven the guard and its tests name) and email addresses outside the reserved and project domains.
+
 ## 0.1.3
 
 - Repository moved to the `securealy` GitHub organization; package metadata updated. First release published through trusted publishing with provenance.

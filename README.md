@@ -62,7 +62,7 @@ Every `grade`, `local`, `scan-repo`, `check-rls`, `check-stripe` and `check-verc
 ```json
 { "at": "2026-10-12T23:00:00Z", "command": "grade", "tier": "passive", "host": "your-app.com",
   "grade": "B", "score": 83, "summary": { "blocker": 0, "fail": 4, "warn": 3, "pass": 38, "skip": 6, "error": 0 },
-  "id": "g_01J...", "failed": ["hsts", "not-found-page"], "engineVersion": "0.1.3" }
+  "id": "g_01J...", "failed": ["hsts", "not-found-page"], "engineVersion": "0.1.4" }
 ```
 
 That is the whole entry: ids and numbers. Never evidence strings, never tokens, never environment values; `host` is recorded only for a grade of a URL. The newest 200 entries are kept, and a `README.md` beside the file explains it. The file is safe to commit. The next `grade` of the same host prints one line against the previous entry:
@@ -149,7 +149,7 @@ The passive grade sends requests only to the URL being graded (what a browser wo
 ```json
 { "command": "grade", "tier": "passive", "grade": "B", "score": 83, "durationMs": 4120, "requests": 19,
   "counts": { "pass": 38, "fail": 4, "warn": 3, "skip": 6, "error": 0, "blocker": 0 },
-  "engine": "0.1.3", "node": 22,
+  "engine": "0.1.4", "node": 22,
   "stack": { "host": "vercel", "builder": "lovable", "db": "supabase", "payments": "stripe", "framework": "next" },
   "failed": ["hsts", "not-found-page"] }
 ```

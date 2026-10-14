@@ -1,6 +1,6 @@
 {
   "name": "securealy",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Grade a freshly launched app the way an attacker and a customer would see it",
   "license": "Apache-2.0",
   "type": "module",
@@ -29,6 +29,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "securealy-core": "0.1.3"
+    "securealy-core": "0.1.4"
   }
 }
