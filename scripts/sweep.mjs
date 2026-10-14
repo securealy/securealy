@@ -113,7 +113,7 @@ const SECOND_LEVEL = /^(?:com|net|org|co|ac|gov|edu|ne|or|firm|me|ltd|plc)\.[a-z
 const PLATFORM = /(vercel\.app|netlify\.app|pages\.dev|workers\.dev|onrender\.com|fly\.dev|railway\.app|lovable\.app|lovableproject\.com|bolt\.host|replit\.app|repl\.co|base44\.app|softr\.app|framer\.(website|app)|webflow\.io|wixsite\.com|github\.io|gitlab\.io|surge\.sh|herokuapp\.com|glitch\.me|web\.app|firebaseapp\.com|azurewebsites\.net|amplifyapp\.com|cloudfront\.net|appspot\.com|deno\.dev|val\.run|streamlit\.app|hf\.space|ngrok(-free)?\.app|trycloudflare\.com|bubbleapps\.io|squarespace\.com|myshopify\.com|carrd\.co|super\.site|notion\.site|typedream\.app|dorik\.io|supabase\.co|stripe\.com|vercel\.com|cloudflare\.com)$/;
 
 const HOST_RE = /\b(?:https?:\/\/)?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:com|net|org|io|dev|app|ai|co|me|sh|site|cloud|uk|au))\b/gi;
-const SKIP = [/^package-lock\.json$/, /^packages\/core\/test\/fixtures\//, /^LICENSE$/, /\.(png|jpg|jpeg|gif|webp|ico|woff2?)$/];
+const SKIP = [/(^|\/)package-lock\.json$/, /^packages\/core\/test\/fixtures\//, /^LICENSE$/, /\.(png|jpg|jpeg|gif|webp|ico|woff2?)$/];
 
 const hits = [];
 for (const file of files) {
