@@ -54,6 +54,19 @@ describe('distribution layout', () => {
     expect(read('plugin/README.md')).toContain(`npx -y securealy-mcp@${version}`);
   });
 
+  it('the Action passes tokens and its own path through the environment, never on a command line', () => {
+    const action = read('packages/action/action.yml');
+    expect(action).not.toMatch(/--token/);
+    expect(action).not.toMatch(/--bypass/);
+    expect(action).toContain('SECUREALY_TOKEN: ${{ inputs.token }}');
+    expect(action).toContain('SECUREALY_BYPASS: ${{ inputs.bypass-token }}');
+    expect(action).toContain('ACTION_PATH: ${{ github.action_path }}');
+    // The grade step's script: every value it uses comes from env, so no expression is interpolated into shell.
+    const script = (action.split('run: |')[1] ?? '').split('\n    - name:')[0] ?? '';
+    expect(script).toContain('npx -y "securealy@${SECUREALY_VERSION}"');
+    expect(script).not.toContain('${{');
+  });
+
   it('the release workflow publishes only the packages whose version matches the tag', () => {
     const release = read('.github/workflows/release.yml');
     expect(release).toContain('for p in packages/checks packages/core packages/cli packages/mcp');

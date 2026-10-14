@@ -18,15 +18,15 @@ inputs:
     required: false
     default: passive
   token:
-    description: Securealy project token (sly_...). Required for tier verified. Pass it from a secret.
+    description: Securealy project token (sly_...). Required for tier verified. Pass it from a secret; it reaches the CLI as the SECUREALY_TOKEN environment variable, never on the command line.
     required: false
     default: ''
   bypass-token:
-    description: Vercel protection bypass token for a protected preview deployment. Sent only to the graded host.
+    description: Vercel protection bypass token for a protected preview deployment. Sent only to the graded host; it reaches the CLI as SECUREALY_BYPASS, never on the command line.
     required: false
     default: ''
   version:
-    description: The securealy CLI version to run through npx.
+    description: The securealy CLI version to run through npx. Caller-controlled, so set it from your own workflow file only, never from an event payload or an untrusted input; the default is the version this Action was released with.
     required: false
     default: 0.1.3
   artifact-name:
@@ -61,15 +61,18 @@ runs:
         SECUREALY_TOKEN: ${{ inputs.token }}
         SECUREALY_BYPASS: ${{ inputs.bypass-token }}
         SECUREALY_VERSION: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
         set +e
         out="${RUNNER_TEMP}/securealy-grade.json"
+        # The token and the bypass token stay in the environment (SECUREALY_TOKEN,
+        # SECUREALY_BYPASS); the CLI reads them from there, so neither ever appears
+        # on a command line.
         args=(grade "$SECUREALY_URL" --json --min-grade "$SECUREALY_MIN_GRADE" --no-color)
         if [ "$SECUREALY_TIER" = "verified" ]; then
           if [ -z "$SECUREALY_TOKEN" ]; then echo "tier verified needs the token input" >&2; exit 2; fi
-          args+=(--tier verified --token "$SECUREALY_TOKEN")
+          args+=(--tier verified)
         fi
-        if [ -n "$SECUREALY_BYPASS" ]; then args+=(--bypass "$SECUREALY_BYPASS"); fi
         npx -y "securealy@${SECUREALY_VERSION}" "${args[@]}" > "$out"
         code=$?
         set -e
@@ -78,7 +81,7 @@ runs:
           echo "securealy exited with $code (opt-out, verification failure or a crash); see the log above" >&2
           exit "$code"
         fi
-        node "${{ github.action_path }}/summary.mjs" "$out" "$SECUREALY_MIN_GRADE" "$code" >> "$GITHUB_OUTPUT"
+        node "$ACTION_PATH/summary.mjs" "$out" "$SECUREALY_MIN_GRADE" "$code" >> "$GITHUB_OUTPUT"
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
 
     - name: Upload GradeResult

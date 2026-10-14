@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { grade, runLocal, verificationOptions, OptOutError, VerificationError } from 'securealy-core';
+import { grade, runLocal, verificationOptions, readTextCapped, OptOutError, VerificationError } from 'securealy-core';
 import type { GradeResult } from 'securealy-core';
 import { API_BASE, meetsMinimum, parseGrade, renderReport, summaryLine } from './report.js';
 import { CLI_VERSION, recordRun } from './record.js';
@@ -23,6 +23,8 @@ Options
   --json            print the GradeResult instead of the report
   --compact         hide passing and skipped rows in the report
   --min-grade <g>   exit 1 when the grade is below this (default C)
+  --token <t>       project token; SECUREALY_TOKEN in the environment is the same thing
+  --bypass <t>      Vercel protection bypass token; or SECUREALY_BYPASS in the environment
   --no-color        plain output
   --no-history      do not append this run to .securealy/history.json (or set SECUREALY_NO_HISTORY=1)
   -h, --help        this text
@@ -33,7 +35,9 @@ Set SECUREALY_TELEMETRY=1 to also send an anonymous aggregate (grade, counts, st
 failing ids; no URL, no host, no evidence) to securealy.com. Off by default.
 
 Nothing here prints a secret. Every environment variable is trimmed before use and
-only ever sent to the service it belongs to.`;
+only ever sent to the service it belongs to. In CI, pass tokens through
+SECUREALY_TOKEN and SECUREALY_BYPASS rather than on the command line, where a
+process listing or a log could show them.`;
 
 const LOCAL_SETS: Record<string, string[]> = {
   'scan-repo': ['repo-secrets', 'gitignore-env-coverage', 'env-example-parity'],
@@ -88,6 +92,13 @@ export async function main(argv: string[], io?: Io): Promise<number> {
   const minGrade = parseGrade(values['min-grade']);
   const cwd = o.cwd ?? process.cwd();
   const env = o.env ?? (process.env as Record<string, string | undefined>);
+  // A flag wins over the variable; either way the value is trimmed and never printed.
+  const fromEnv = (flag: string | undefined, name: string): string | undefined => {
+    const v = (flag ?? env[name] ?? '').trim();
+    return v === '' ? undefined : v;
+  };
+  const token = fromEnv(values.token, 'SECUREALY_TOKEN');
+  const bypass = fromEnv(values.bypass, 'SECUREALY_BYPASS');
   const emit = async (r: GradeResult, ran: RunCommand): Promise<number> => {
     const rec = recordRun(r, ran, { cwd, env, noHistory: values['no-history'] === true, fetch: o.fetch, telemetryEndpoint: o.telemetryEndpoint, userAgent: `securealy-cli/${CLI_VERSION}` });
     if (values.json) o.out(JSON.stringify(r, null, 2));
@@ -104,12 +115,12 @@ export async function main(argv: string[], io?: Io): Promise<number> {
     case 'grade': {
       if (!arg) throw new Error('grade needs a URL');
       const tier = values.tier === 'verified' ? 'verified' : 'passive';
-      if (tier === 'verified' && !values.token) throw new Error('--tier verified needs --token sly_...');
+      if (tier === 'verified' && !token) throw new Error('--tier verified needs --token sly_... (or SECUREALY_TOKEN in the environment)');
       try {
         const r = await grade(arg, {
           tier,
-          verifyToken: values.token?.trim(),
-          bypassToken: values.bypass?.trim(),
+          verifyToken: token,
+          bypassToken: bypass,
           fetch: o.fetch,
           log: values.verbose ? (line) => o.err(`  ${line}`) : undefined,
         });
@@ -122,7 +133,7 @@ export async function main(argv: string[], io?: Io): Promise<number> {
         if (e instanceof VerificationError) {
           o.err(e.message);
           o.err('');
-          o.err(verifyText(e.host, values.token));
+          o.err(verifyText(e.host, token));
           return 2;
         }
         throw e;
@@ -130,7 +141,7 @@ export async function main(argv: string[], io?: Io): Promise<number> {
     }
     case 'verify': {
       if (!arg) throw new Error('verify needs a domain');
-      o.out(verifyText(arg.replace(/^https?:\/\//, '').replace(/\/.*$/, ''), values.token));
+      o.out(verifyText(arg.replace(/^https?:\/\//, '').replace(/\/.*$/, ''), token));
       return 0;
     }
     case 'scan-repo':
@@ -147,8 +158,7 @@ export async function main(argv: string[], io?: Io): Promise<number> {
     }
     case 'post': {
       if (!arg) throw new Error('post needs a result.json path');
-      const token = values.token?.trim();
-      if (!token) throw new Error('post needs --token sly_...');
+      if (!token) throw new Error('post needs --token sly_... (or SECUREALY_TOKEN in the environment)');
       const raw = await readFile(resolve(arg), 'utf8');
       const result = JSON.parse(raw) as GradeResult;
       if (result.schema !== 1 || !Array.isArray(result.checks)) throw new Error(`${arg} is not a Securealy GradeResult`);
@@ -157,7 +167,7 @@ export async function main(argv: string[], io?: Io): Promise<number> {
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'user-agent': `securealy-cli/${CLI_VERSION}` },
         body: JSON.stringify(result),
       });
-      const text = await res.text();
+      const text = (await readTextCapped(res, 2_000)).text;
       if (!res.ok) {
         o.err(`post failed: ${res.status} ${text.slice(0, 200)}`);
         return 1;

@@ -73,6 +73,25 @@ describe('report', () => {
     expect(text).toMatch(/securealy-verify=[0-9a-f]{32}/);
   });
 
+  it('reads the token from SECUREALY_TOKEN when no flag is given, and the flag wins', async () => {
+    const run = async (argv: string[], env: Record<string, string>) => {
+      const out: string[] = [];
+      await main(argv, { out: (s) => out.push(s), err: (s) => out.push(s), color: false, env });
+      return out.join('\n');
+    };
+    const flagged = await run(['verify', 'app.example', '--token', 'sly_FAKEtokenFAKEtoken'], {});
+    const fromEnv = await run(['verify', 'app.example'], { SECUREALY_TOKEN: ' sly_FAKEtokenFAKEtoken\n' });
+    const fp = /securealy-verify=([0-9a-f]{32})/.exec(flagged)?.[1];
+    expect(fp).toBeTruthy();
+    expect(fromEnv).toContain(`securealy-verify=${fp}`);
+    expect(fromEnv).not.toContain('sly_FAKEtokenFAKEtoken');
+    const flagWins = await run(['verify', 'app.example', '--token', 'sly_OTHERtokenOTHERtoken'], { SECUREALY_TOKEN: 'sly_FAKEtokenFAKEtoken' });
+    expect(flagWins).not.toContain(`securealy-verify=${fp}`);
+    const none = await run(['verify', 'app.example'], {});
+    expect(none).toContain('Pass --token');
+    await expect(main(['grade', 'https://app.example', '--tier', 'verified'], { out: () => {}, err: () => {}, color: false, env: {} })).rejects.toThrow(/SECUREALY_TOKEN/);
+  });
+
   it('prints help and exits 1 without a command', async () => {
     const out: string[] = [];
     const code = await main([], { out: (s) => out.push(s), err: (s) => out.push(s), color: false });

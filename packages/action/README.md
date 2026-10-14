@@ -53,7 +53,7 @@ For a Vercel preview with deployment protection, add `bypass-token: ${{ secrets.
 | `tier` | `passive` | `passive` or `verified` |
 | `token` | | Project token, needed for `verified` |
 | `bypass-token` | | Vercel protection bypass token |
-| `version` | `0.1.3` | `securealy` CLI version run through npx |
+| `version` | `0.1.3` | `securealy` CLI version run through npx. Caller-controlled: set it only from your own workflow file, never from an event payload |
 | `artifact-name` | `securealy-grade` | Name of the uploaded JSON artifact |
 
 ## Outputs
@@ -62,4 +62,4 @@ For a Vercel preview with deployment protection, add `bypass-token: ${{ secrets.
 
 ## What leaves the runner
 
-The passive tier sends requests only to the URL being graded plus DNS, TLS and RDAP lookups for its domain. The verified tier also sends the URL and the token to securealy.com. Nothing else is sent anywhere. The token travels in a `--token` argument to the CLI inside the step and in an `Authorization` header to securealy.com; it is never printed.
+The passive tier sends requests only to the URL being graded plus DNS, TLS and RDAP lookups for its domain. The verified tier also sends the URL and the token to securealy.com. Nothing else is sent anywhere. The token and the bypass token reach the CLI as the `SECUREALY_TOKEN` and `SECUREALY_BYPASS` environment variables, never as command-line arguments, and travel to their destination in a header; neither is printed.
