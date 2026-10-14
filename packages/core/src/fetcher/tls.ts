@@ -1,10 +1,12 @@
 import { connect, checkServerIdentity } from 'node:tls';
 import type { PeerCertificate } from 'node:tls';
 import type { TlsEvidence } from '../evidence.js';
+import type { HostGuard } from './safe.js';
 
 const TLS_TIMEOUT_MS = 8_000;
 
-export function gatherTls(host: string, port = 443): Promise<TlsEvidence> {
+/** The socket resolves through the guard, so the probe only ever reaches the vetted addresses. */
+export function gatherTls(host: string, guard: HostGuard, port = 443): Promise<TlsEvidence> {
   return new Promise((resolve) => {
     const out: TlsEvidence = { connected: false, authorized: false, hostMatches: false, sans: [] };
     let settled = false;
@@ -18,7 +20,7 @@ export function gatherTls(host: string, port = 443): Promise<TlsEvidence> {
       }
       resolve(ev);
     };
-    const socket = connect({ host, port, servername: host, rejectUnauthorized: false, ALPNProtocols: ['http/1.1'] }, () => {
+    const socket = connect({ host, port, servername: host, rejectUnauthorized: false, ALPNProtocols: ['http/1.1'], lookup: guard.lookup }, () => {
       out.connected = true;
       out.authorized = socket.authorized;
       if (socket.authorizationError) out.authorizationError = String(socket.authorizationError);

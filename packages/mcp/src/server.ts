@@ -27,6 +27,8 @@ export interface ServerOptions {
   /** Injectable DNS resolver for tests. */
   dns?: Resolver;
   skipDnssec?: boolean;
+  /** Tests only: let grade_url fetch a fixture server on 127.0.0.1. Never set from an environment variable or a tool argument. */
+  allowPrivate?: boolean;
   timeoutMs?: number;
   pollTimeoutMs?: number;
   pollIntervalMs?: number;
@@ -145,7 +147,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
           const r = await hostedGrade(url, t, api);
           return ok(resultText(r, 'mcp.grade_url'), r as unknown as Record<string, unknown>);
         }
-        const r = await grade(url, { tier: 'passive', bypassToken: bypassToken?.trim(), fetch: fetchImpl, dns: opts.dns, skipDnssec: opts.skipDnssec, timeoutMs: opts.timeoutMs, log });
+        const r = await grade(url, { tier: 'passive', bypassToken: bypassToken?.trim(), fetch: fetchImpl, dns: opts.dns, skipDnssec: opts.skipDnssec, allowPrivate: opts.allowPrivate, timeoutMs: opts.timeoutMs, log });
         return ok(resultText(r, 'mcp.grade_url'), r as unknown as Record<string, unknown>);
       } catch (e) {
         if (e instanceof OptOutError) return fail(`This host has opted out of passive grading (${e.message}). Do not grade it; the owner can run the CLI locally instead.`);

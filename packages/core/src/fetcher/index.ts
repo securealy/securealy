@@ -4,11 +4,14 @@ import { emptyEvidence, makeRecord } from '../evidence.js';
 import { apexOf, normalizeInput, platformSuffixOf } from '../domain.js';
 import { parsePage, resolveUrl, sameSite, hostOf, meta } from '../html.js';
 import type { ParsedPage } from '../html.js';
-import type { GradeOptions } from '../types.js';
+import type { GradeOptions, Resolver } from '../types.js';
 import { redactSecret } from '../redact.js';
 import { OptOutError, VerificationError, txtMatchesFingerprint, verificationFingerprint, VERIFY_PREFIX } from '../verify.js';
+import { fetch as undiciFetch } from 'undici';
 import { Budget, createClient } from './http.js';
 import type { HttpClient } from './http.js';
+import { createHostGuard } from './safe.js';
+import type { HostGuard } from './safe.js';
 import { defaultResolver, gatherDns, lookupSecurealyTxt } from './dns.js';
 import { gatherTls } from './tls.js';
 import { gatherRdap } from './rdap.js';
@@ -250,7 +253,7 @@ async function gatherVerified(
 
 /** Gather every piece of evidence once. Throws OptOutError and VerificationError. */
 export async function gather(input: string, opts: GradeOptions = {}): Promise<Evidence> {
-  const url = normalizeInput(input);
+  const url = normalizeInput(input, { allowPrivate: opts.allowPrivate });
   const host = url.hostname.toLowerCase();
   const apex = apexOf(host);
   const tier = opts.tier === 'verified' ? 'verified' : 'passive';
@@ -264,9 +267,31 @@ export async function gather(input: string, opts: GradeOptions = {}): Promise<Ev
   };
   const maxRequests = opts.maxRequests ?? (tier === 'verified' ? PASSIVE_MAX_REQUESTS + VERIFIED_EXTRA_REQUESTS : PASSIVE_MAX_REQUESTS);
   const budget = new Budget(maxRequests, Date.now() + (opts.timeoutMs ?? TOTAL_TIMEOUT_MS));
-  const fetchImpl = opts.fetch ?? globalThis.fetch;
-  const client = createClient(fetchImpl, budget, log, { bypass: opts.bypassToken ? { host, token: opts.bypassToken } : null });
+  // The engine's own fetch is undici's, so the guard's dispatcher is honored; an injected fetch (tests) still sees every check.
+  const fetchImpl = opts.fetch ?? (undiciFetch as unknown as typeof fetch);
+  const guard = createHostGuard({ lookup: opts.lookup, allowPrivate: opts.allowPrivate });
+  const client = createClient(fetchImpl, budget, log, guard, { bypass: opts.bypassToken ? { host, token: opts.bypassToken } : null });
   const resolver = opts.dns ?? defaultResolver();
+  try {
+    return await gatherWith(url, host, apex, ev, opts, client, guard, resolver, budget, log);
+  } finally {
+    await guard.close().catch(() => {});
+  }
+}
+
+async function gatherWith(
+  url: URL,
+  host: string,
+  apex: string,
+  ev: Evidence,
+  opts: GradeOptions,
+  client: HttpClient,
+  guard: HostGuard,
+  resolver: Resolver,
+  budget: Budget,
+  log: (line: string) => void,
+): Promise<Evidence> {
+  const tier = ev.tier;
 
   // 1. Opt-out first, before any request to the host.
   const securealyTxt = await lookupSecurealyTxt(resolver, host, apex);
@@ -285,7 +310,7 @@ export async function gather(input: string, opts: GradeOptions = {}): Promise<Ev
   // 3. DNS, TLS, RDAP and the plain-http probe in parallel.
   const [dns, tls, rdap, httpProbe] = await Promise.all([
     gatherDns(resolver, host, apex, { skipDnssec: opts.skipDnssec }),
-    gatherTls(host),
+    gatherTls(host, guard),
     gatherRdap(client, apex, ev.platformSuffix),
     client.request(`http://${host}${url.pathname}`, { keepBytes: 0, follow: false }),
   ]);

@@ -112,6 +112,15 @@ export interface GradeOptions {
   log?: (line: string) => void;
   /** Skip the DNSSEC raw UDP query (tests, restricted networks). */
   skipDnssec?: boolean;
+  /** Test hook: resolve a hostname for the request-forgery guard. Defaults to dns.lookup with every address. */
+  lookup?: (hostname: string) => Promise<{ address: string; family: number }[]>;
+  /**
+   * Tests only. The engine refuses to fetch loopback, link-local, private,
+   * CGNAT, unique-local, multicast and reserved addresses, and the names that
+   * mean them, on the input, every redirect and every URL found in a page.
+   * This switches that refusal off for a fixture server on 127.0.0.1.
+   */
+  allowPrivate?: boolean;
 }
 
 export interface LocalOptions {

@@ -4,6 +4,8 @@
  * customers get a subdomain, which is where most freshly launched apps live.
  */
 
+import { literalReason, UnsafeHostError } from './fetcher/safe.js';
+
 const COUNTRY_SECOND_LEVEL = new Set([
   'co.uk', 'org.uk', 'ac.uk', 'gov.uk', 'me.uk', 'ltd.uk', 'plc.uk',
   'com.au', 'net.au', 'org.au', 'edu.au', 'gov.au',
@@ -51,11 +53,28 @@ export function apexOf(host: string): string {
   return lastTwo;
 }
 
-export function normalizeInput(input: string): URL {
+/**
+ * Parse the input into an http(s) URL. A name or literal that can only mean
+ * the local machine or a private network is refused here, before anything
+ * resolves; the resolved addresses are checked again by the fetcher's guard.
+ */
+export function normalizeInput(input: string, opts: { allowPrivate?: boolean } = {}): URL {
   let s = input.trim();
-  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
-  const u = new URL(s);
+  const scheme = /^([a-z][a-z0-9+.-]*):\/\//i.exec(s)?.[1]?.toLowerCase();
+  if (scheme && scheme !== 'http' && scheme !== 'https') throw new Error(`Not an http(s) URL: ${input}`);
+  if (!scheme) s = `https://${s}`;
+  let u: URL;
+  try {
+    u = new URL(s);
+  } catch {
+    throw new Error(`Not a URL: ${input}`);
+  }
   u.hash = '';
   if (!u.hostname) throw new Error(`Not a URL: ${input}`);
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error(`Not an http(s) URL: ${input}`);
+  if (!opts.allowPrivate) {
+    const reason = literalReason(u.hostname);
+    if (reason) throw new UnsafeHostError(u.hostname, reason);
+  }
   return u;
 }

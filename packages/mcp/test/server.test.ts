@@ -93,7 +93,7 @@ function routedFetch(table: Record<string, { status: number; body: string }> = {
 
 async function connect(opts: Parameters<typeof createServer>[0] = {}) {
   // A fresh working directory per server so the run record never lands in the repository.
-  const server = createServer({ fetch: routedFetch(), dns: fakeResolver(), skipDnssec: true, cwd: tmpDir(), env: {}, ...opts });
+  const server = createServer({ fetch: routedFetch(), dns: fakeResolver(), skipDnssec: true, allowPrivate: true, cwd: tmpDir(), env: {}, ...opts });
   const [clientT, serverT] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0.0.0' });
   await server.connect(serverT);

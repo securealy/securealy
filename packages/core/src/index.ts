@@ -4,6 +4,8 @@ export { catalogue, catalogueByTier, catalogueEntry } from './catalogue.js';
 export { score, letterFor, gradeRank, WEIGHTS } from './score.js';
 export { gather, notFoundPath, PASSIVE_MAX_REQUESTS, VERIFIED_EXTRA_REQUESTS, TOTAL_TIMEOUT_MS } from './fetcher/index.js';
 export { USER_AGENT } from './fetcher/http.js';
+export { createHostGuard, isPrivateAddress, isForbiddenName, UnsafeHostError } from './fetcher/safe.js';
+export type { HostGuard, Address as GuardAddress } from './fetcher/safe.js';
 export { DKIM_SELECTORS } from './fetcher/dns.js';
 export { buildContext } from './checks/context.js';
 export { REMOTE_CHECKS } from './checks/index.js';

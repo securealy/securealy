@@ -2,11 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { grade, OptOutError, VerificationError, verificationFingerprint, USER_AGENT } from '../src/index.js';
 import type { Resolver } from '../src/index.js';
 
+/** The guard resolves every test host to one public address; the engine never touches real DNS here. */
+const PUBLIC_V4 = '8.8.8.8';
+const publicLookup = async () => [{ address: PUBLIC_V4, family: 4 }];
+
 function fakeResolver(txt: Record<string, string[][]> = {}): Resolver {
   const nodata = () => Promise.reject(Object.assign(new Error('ENODATA'), { code: 'ENODATA' }));
   return {
     resolveNs: () => Promise.resolve(['ns1.dns.example', 'ns2.dns.example']),
-    resolve4: () => Promise.resolve(['203.0.113.5']),
+    resolve4: () => Promise.resolve([PUBLIC_V4]),
     resolve6: nodata,
     resolveMx: nodata,
     resolveTxt: (name) => (txt[name] ? Promise.resolve(txt[name] as string[][]) : nodata()),
@@ -32,13 +36,13 @@ describe('opt-out', () => {
   it('honors the DNS TXT opt-out before any HTTP request', async () => {
     const fetchImpl = fakeFetch(() => new Response(HTML, { status: 200, headers: { 'content-type': 'text/html' } }));
     const dns = fakeResolver({ '_securealy.optout.example': [['optout']] });
-    await expect(grade('https://optout.example', { fetch: fetchImpl, dns, skipDnssec: true })).rejects.toBeInstanceOf(OptOutError);
+    await expect(grade('https://optout.example', { fetch: fetchImpl, dns, lookup: publicLookup, skipDnssec: true })).rejects.toBeInstanceOf(OptOutError);
     expect(fetchImpl.calls).toHaveLength(0);
   });
 
   it('honors the X-Securealy: optout header after the first request', async () => {
     const fetchImpl = fakeFetch(() => new Response(HTML, { status: 200, headers: { 'content-type': 'text/html', 'x-securealy': 'optout' } }));
-    await expect(grade('https://header-optout.example', { fetch: fetchImpl, dns: fakeResolver(), skipDnssec: true })).rejects.toMatchObject({ name: 'OptOutError', via: 'header' });
+    await expect(grade('https://header-optout.example', { fetch: fetchImpl, dns: fakeResolver(), lookup: publicLookup, skipDnssec: true })).rejects.toMatchObject({ name: 'OptOutError', via: 'header' });
     expect(fetchImpl.calls).toHaveLength(1);
   });
 });
@@ -55,7 +59,7 @@ describe('grade', () => {
       if (url === 'https://budget.example/') return new Response(HTML, { status: 200, headers: { 'content-type': 'text/html' } });
       return new Response('nope', { status: 404, headers: { 'content-type': 'text/plain' } });
     });
-    const r = await grade('https://budget.example', { fetch: fetchImpl, dns: fakeResolver(), skipDnssec: true, timeoutMs: 20_000 });
+    const r = await grade('https://budget.example', { fetch: fetchImpl, dns: fakeResolver(), lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     expect(ua).toBe(USER_AGENT);
     expect(r.schema).toBe(1);
     expect(r.id).toMatch(/^g_[0-9A-HJKMNP-TV-Z]{26}$/);
@@ -82,7 +86,7 @@ describe('grade', () => {
       resolveTxt: () => Promise.reject(Object.assign(new Error('ENOTFOUND'), { code: 'ENOTFOUND' })),
       resolveCname: () => Promise.reject(Object.assign(new Error('ENOTFOUND'), { code: 'ENOTFOUND' })),
     };
-    const r = await grade('https://does-not-exist-securealy-test.invalid', { fetch: fetchImpl, dns: dead, skipDnssec: true, timeoutMs: 20_000 });
+    const r = await grade('https://does-not-exist-securealy-test.invalid', { fetch: fetchImpl, dns: dead, lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     expect(r.checks).toHaveLength(51);
     expect(r.checks.find((c) => c.id === 'tls-valid')?.status).toBe('fail');
     // rdap.org answered 404 without redirecting, so there is no RDAP server for the TLD: not a verdict on the domain.
@@ -98,7 +102,7 @@ describe('grade', () => {
       if (/rdap/.test(url)) return new Response('{}', { status: 404 });
       return new Response('<html><body>Access denied</body></html>', { status: 403, headers: { 'content-type': 'text/html' } });
     });
-    const r = await grade('https://blocked.example', { fetch: fetchImpl, dns: fakeResolver(), skipDnssec: true, timeoutMs: 20_000 });
+    const r = await grade('https://blocked.example', { fetch: fetchImpl, dns: fakeResolver(), lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     const errors = r.checks.filter((c) => c.status === 'error');
     expect(errors.length).toBeGreaterThan(20);
     for (const e of errors) expect(e.evidence).toMatch(/403|cannot judge|unavailable|not found/);
@@ -110,7 +114,7 @@ describe('grade', () => {
       if (url === 'https://unverified.example/') return new Response(HTML, { status: 200, headers: { 'content-type': 'text/html' } });
       return new Response('x', { status: 404 });
     });
-    await expect(grade('https://unverified.example', { tier: 'verified', verifyToken: 'sly_test', fetch: fetchImpl, dns: fakeResolver(), skipDnssec: true, timeoutMs: 20_000 })).rejects.toBeInstanceOf(VerificationError);
+    await expect(grade('https://unverified.example', { tier: 'verified', verifyToken: 'sly_test', fetch: fetchImpl, dns: fakeResolver(), lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 })).rejects.toBeInstanceOf(VerificationError);
   });
 
   it('runs the verified probes once the DNS fingerprint matches', async () => {
@@ -122,7 +126,7 @@ describe('grade', () => {
       return new Response('x', { status: 404 });
     });
     const dns = fakeResolver({ '_securealy.verified.example': [[`securealy-verify=${fp}`]] });
-    const r = await grade('https://verified.example', { tier: 'verified', verifyToken: token, fetch: fetchImpl, dns, skipDnssec: true, timeoutMs: 20_000 });
+    const r = await grade('https://verified.example', { tier: 'verified', verifyToken: token, fetch: fetchImpl, dns, lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     expect(r.tier).toBe('verified');
     expect(r.checks).toHaveLength(58);
     const env = r.checks.find((c) => c.id === 'exposed-env-files');

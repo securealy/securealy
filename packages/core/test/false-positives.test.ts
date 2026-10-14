@@ -271,11 +271,15 @@ describe('checks that cannot be judged skip instead of passing or failing', () =
 
 /* ---------------- fetcher-level regressions through grade() ---------------- */
 
+/** The guard resolves every test host to one public address; the engine never touches real DNS here. */
+const PUBLIC_V4 = '8.8.8.8';
+const publicLookup = async () => [{ address: PUBLIC_V4, family: 4 }];
+
 function fakeResolver(): Resolver {
   const nodata = () => Promise.reject(Object.assign(new Error('ENODATA'), { code: 'ENODATA' }));
   return {
     resolveNs: () => Promise.resolve(['ns1.dns.example']),
-    resolve4: () => Promise.resolve(['203.0.113.5']),
+    resolve4: () => Promise.resolve([PUBLIC_V4]),
     resolve6: nodata,
     resolveMx: nodata,
     resolveTxt: nodata,
@@ -310,7 +314,7 @@ describe('fetcher regressions', () => {
       if (init?.method === 'HEAD') return new Response(null, { status: 405 });
       return new Response('nope', { status: 404, headers: { 'content-type': 'text/plain' } });
     });
-    const r = await grade('https://fetch.example', { fetch: fetchImpl, dns: fakeResolver(), skipDnssec: true, timeoutMs: 20_000 });
+    const r = await grade('https://fetch.example', { fetch: fetchImpl, dns: fakeResolver(), lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     const og = r.checks.find((c) => c.id === 'og-image');
     expect(og?.status).toBe('pass');
     expect(fetchImpl.calls).toContain('HEAD https://fetch.example/og.png');
@@ -327,11 +331,11 @@ describe('fetcher regressions', () => {
         if (url === 'https://fetch.example/') return new Response(PAGE, { status: 200, headers: { 'content-type': 'text/html' } });
         return new Response('nope', { status: 404, headers: { 'content-type': 'text/plain' } });
       });
-    const a = await grade('https://fetch.example', { fetch: mk(false), dns: fakeResolver(), skipDnssec: true, timeoutMs: 20_000 });
+    const a = await grade('https://fetch.example', { fetch: mk(false), dns: fakeResolver(), lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     const da = a.checks.find((c) => c.id === 'domain-expiry');
     expect(da?.status).toBe('skip');
     expect(da?.evidence).toMatch(/no RDAP server is listed for \.example/);
-    const b = await grade('https://fetch.example', { fetch: mk(true), dns: fakeResolver(), skipDnssec: true, timeoutMs: 20_000 });
+    const b = await grade('https://fetch.example', { fetch: mk(true), dns: fakeResolver(), lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     expect(b.checks.find((c) => c.id === 'domain-expiry')?.status).toBe('fail');
   });
 
@@ -341,7 +345,7 @@ describe('fetcher regressions', () => {
       if (url === 'https://fetch.example/') return new Response('<html>challenge</html>', { status: 429, headers: { 'content-type': 'text/html', 'x-vercel-mitigated': 'challenge', server: 'Vercel' } });
       return new Response(null, { status: 429, headers: { 'x-vercel-mitigated': 'challenge' } });
     });
-    const r = await grade('https://fetch.example', { fetch: fetchImpl, dns: fakeResolver(), skipDnssec: true, timeoutMs: 20_000 });
+    const r = await grade('https://fetch.example', { fetch: fetchImpl, dns: fakeResolver(), lookup: publicLookup, skipDnssec: true, timeoutMs: 20_000 });
     const hsts = r.checks.find((c) => c.id === 'hsts');
     expect(hsts?.status).toBe('error');
     expect(hsts?.evidence).toMatch(/Vercel bot challenge/);

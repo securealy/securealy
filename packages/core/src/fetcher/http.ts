@@ -1,5 +1,8 @@
+import type { Dispatcher } from 'undici';
 import type { BodyHint, HttpRecord } from '../evidence.js';
 import { makeRecord } from '../evidence.js';
+import { UnsafeHostError } from './safe.js';
+import type { HostGuard } from './safe.js';
 
 export const USER_AGENT = 'SecurealyGrader/1.0 (+https://securealy.com/grader)';
 export const PER_REQUEST_TIMEOUT_MS = 8_000;
@@ -122,10 +125,16 @@ function headerMap(h: Headers): { headers: Record<string, string>; setCookie: st
   return { headers, setCookie };
 }
 
+/**
+ * Every request, including each redirect hop, passes the host guard before a
+ * socket is opened, and the connection is pinned to the addresses the guard
+ * vetted. A refused URL costs no budget: it never left the machine.
+ */
 export function createClient(
   fetchImpl: typeof fetch,
   budget: Budget,
   log: (line: string) => void,
+  guard: HostGuard,
   defaults: { bypass?: { host: string; token: string } | null } = {},
 ): HttpClient {
   /** Some origins (Python functions, old proxies) refuse HEAD outright; that says nothing about the resource, so ask again with GET and discard the body. */
@@ -150,6 +159,13 @@ export function createClient(
       if (budget.timeLeft <= 0) {
         return makeRecord({ url, method, redirects, error: 'total timeout reached' });
       }
+      try {
+        await guard.check(new URL(url));
+      } catch (e) {
+        const reason = e instanceof UnsafeHostError ? e.message : `not a URL: ${(e as Error).message}`;
+        log(`${method} ${url} -> refused (${reason})`);
+        return makeRecord({ url, method, redirects, totalMs: Date.now() - started, error: `refused: ${reason}`.slice(0, 160) });
+      }
       if (!budget.take()) {
         return makeRecord({ url, method, redirects, error: 'request budget exhausted' });
       }
@@ -173,7 +189,8 @@ export function createClient(
       const hopStart = Date.now();
       let res: Response;
       try {
-        res = await fetchImpl(url, { method, headers, redirect: 'manual', signal: controller.signal });
+        const init: RequestInit & { dispatcher: Dispatcher } = { method, headers, redirect: 'manual', signal: controller.signal, dispatcher: guard.dispatcher };
+        res = await fetchImpl(url, init);
       } catch (e) {
         clearTimeout(timer);
         const err = e as Error & { cause?: { code?: string; message?: string } };
