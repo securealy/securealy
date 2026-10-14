@@ -10,7 +10,7 @@
       "name": "securealy",
       "source": "./plugin",
       "description": "Launch check skill plus the Securealy MCP server: grade a URL, scan the repo, check Supabase RLS, Stripe webhooks and Vercel env, fetch fixes.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "author": {
         "name": "Securealy",
         "url": "https://securealy.com"

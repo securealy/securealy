@@ -28,7 +28,7 @@ inputs:
   version:
     description: The securealy CLI version to run through npx.
     required: false
-    default: 0.1.2
+    default: 0.1.3
   artifact-name:
     description: Name of the uploaded artifact that holds the GradeResult JSON.
     required: false

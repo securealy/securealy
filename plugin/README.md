@@ -5,7 +5,7 @@ Grades a freshly launched web app the way an attacker and a customer would see i
 ## What it adds
 
 - The `/securealy:launch-check` skill: asks for the preview or live URL and the repository, grades the URL, scans the repository for committed secrets and `.env` coverage, explains blockers in plain language, fetches the fix for each failing check, applies the fixes you approve, re-grades, and reports the before and after grade.
-- The `securealy` MCP server, started with `npx -y securealy-mcp@0.1.2`, with these tools: `grade_url`, `scan_repo`, `check_rls`, `check_stripe`, `check_vercel_env`, `get_check`, `list_checks`, `fetch_fix`, `post_result`, and two resources, `securealy://checks` (the catalogue) and `securealy://spec` (the engine spec).
+- The `securealy` MCP server, started with `npx -y securealy-mcp@0.1.3`, with these tools: `grade_url`, `scan_repo`, `check_rls`, `check_stripe`, `check_vercel_env`, `get_check`, `list_checks`, `fetch_fix`, `post_result`, and two resources, `securealy://checks` (the catalogue) and `securealy://spec` (the engine spec).
 
 ## Install
 

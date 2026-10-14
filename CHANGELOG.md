@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Repository moved to the `securealy` GitHub organization; package metadata updated. First release published through trusted publishing with provenance.
+
 ## 0.1.2
 
 The learning record. `securealy` and `securealy-mcp` only; `securealy-core` and `securealy-checks` stay at 0.1.1.

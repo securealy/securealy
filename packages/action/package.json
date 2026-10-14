@@ -1,6 +1,6 @@
 {
   "name": "securealy-action",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "GitHub Action that grades a URL with Securealy and gates the job on a minimum grade",
   "license": "Apache-2.0",
