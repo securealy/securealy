@@ -126,7 +126,7 @@ function base() {
   ev.imageSamples = [head(`${ORIGIN}/hero.png`, 200, { 'content-type': 'image/png' }, 120_000)];
   ev.dns = {
     ns: ['ada.ns.cloudflare.com', 'bob.ns.cloudflare.com'],
-    a: { apex: ['203.0.113.10'], www: ['203.0.113.10'], host: ['203.0.113.10'] },
+    a: { apex: ['8.8.8.8'], www: ['8.8.8.8'], host: ['8.8.8.8'] },
     aaaa: { apex: [], www: [], host: [] },
     cname: [],
     mx: [{ exchange: 'mx1.mail.example', priority: 10 }],

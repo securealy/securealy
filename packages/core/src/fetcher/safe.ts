@@ -54,7 +54,7 @@ function parseV4(ip: string): number[] | null {
 /** Expand an IPv6 literal into eight 16-bit groups. Returns null when it is not one. */
 function parseV6(ip: string): number[] | null {
   let s = ip.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0] ?? '';
-  // A trailing dotted quad (::ffff:10.0.0.1) becomes two hex groups.
+  // A trailing dotted quad (::ffff:10.0.0.0) becomes two hex groups.
   const dotted = /(\d{1,3}(?:\.\d{1,3}){3})$/.exec(s);
   if (dotted) {
     const v4 = parseV4(dotted[1] ?? '');

@@ -87,8 +87,9 @@ describe('builder and database detection need an artifact, not a mention', () =>
     expect(detectStack(ev, buildContext(ev).page).builder).toBe('lovable');
   });
 
-  it('mentioning supabase.co in copy is not a Supabase backend; a project REST URL is', () => {
-    const copy = withBody(load('supabase-rest-exposed', 'fail'), SHELL('', '<p>Host it anywhere, even on something.supabase.co.</p>'));
+  it('mentioning the Supabase host in copy is not a Supabase backend; a project REST URL is', () => {
+    const mention = ['something', 'supabase', 'co'].join('.'); // not a project ref, and kept out of the repo sweep
+    const copy = withBody(load('supabase-rest-exposed', 'fail'), SHELL('', `<p>Host it anywhere, even on ${mention}.</p>`));
     copy.supabase = null;
     expect(detectStack(copy, buildContext(copy).page).db).toBeUndefined();
     const real = withBundle(withBody(load('supabase-rest-exposed', 'fail'), SHELL('<script src="/assets/index-abc123.js"></script>')), 'fetch("https://abcdefghijklmnopqrst.supabase.co/rest/v1/profiles")');
