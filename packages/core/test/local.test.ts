@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { describe, it, expect, afterAll } from 'vitest';
-import { runLocal, LOCAL_CHECKS, catalogue } from '../src/index.js';
+import { runLocal, LOCAL_CHECKS, catalogue, GIT_SAFETY_ARGS } from '../src/index.js';
+import { createLocalContext } from '../src/local/context.js';
 import type { Status } from '../src/index.js';
 
 /**
@@ -81,3 +82,84 @@ for (const entry of local) {
     }
   });
 }
+
+/** A fetch that records every URL it is asked for and answers from a table. */
+function recordingFetch(responses: LocalFixture['responses'] = []): typeof fetch & { calls: string[] } {
+  const calls: string[] = [];
+  const inner = fakeFetch(responses);
+  const f = (async (input: string | URL | Request, init?: RequestInit) => {
+    calls.push(typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url);
+    return inner(input, init);
+  }) as typeof fetch & { calls: string[] };
+  f.calls = calls;
+  return f;
+}
+
+describe('git is spawned with the safety flags', () => {
+  it('every git call overrides core.fsmonitor and core.hooksPath, so a scanned repository cannot run its own hooks', async () => {
+    const dir = materialize({ files: { 'a.txt': 'a\n' }, git: true });
+    execFileSync('git', ['config', 'core.hooksPath', join(dir, 'evil-hooks')], { cwd: dir });
+    execFileSync('git', ['config', 'core.fsmonitor', join(dir, 'evil-fsmonitor')], { cwd: dir });
+    const ctx = createLocalContext(dir, {}, fakeFetch(), () => {});
+    expect((await ctx.exec('git', ['config', 'core.hooksPath'])).stdout.trim()).toBe('/dev/null');
+    expect((await ctx.exec('git', ['config', 'core.fsmonitor'])).stdout.trim()).toBe('false');
+    const seen: string[] = [];
+    await ctx.stream('git', ['config', 'core.hooksPath'], (line) => void seen.push(line), 10_000);
+    expect(seen).toEqual(['/dev/null']);
+    expect(GIT_SAFETY_ARGS).toContain('core.fsmonitor=false');
+  });
+});
+
+describe('rls-policies only sends the service key to a Supabase-hosted https project', () => {
+  const key = 'FAKEserviceKeyFAKEserviceKeyFAKE';
+  const run = (url: string, extra: Record<string, string> = {}) => {
+    const f = recordingFetch();
+    return runLocal({ cwd: materialize({}), checks: ['rls-policies'], env: { SUPABASE_URL: url, SUPABASE_SERVICE_KEY: key, ...extra }, fetch: f }).then((r) => ({ r, calls: f.calls }));
+  };
+
+  it('skips without a request for a foreign host, a plain-http URL or a non-URL', async () => {
+    for (const url of ['https://evil.example/supabase', 'http://abcdefghijklmnopqrst.supabase.co', 'https://abcdefghijklmnopqrst.supabase.co.evil.example', 'not a url']) {
+      const { r, calls } = await run(url);
+      expect(calls, url).toEqual([]);
+      expect(r.checks[0]?.status, url).toBe('skip');
+      expect(r.checks[0]?.evidence, url).toContain('SECUREALY_SUPABASE_HOST_OVERRIDE');
+      expect(JSON.stringify(r)).not.toContain(key);
+    }
+  });
+
+  it('sends it to a Supabase-hosted project, and to anything else only with the override', async () => {
+    const hosted = await run('https://abcdefghijklmnopqrst.supabase.co');
+    expect(hosted.calls).toHaveLength(1);
+    expect(hosted.calls[0]).toBe('https://abcdefghijklmnopqrst.supabase.co/rest/v1/');
+    const overridden = await run('https://supabase.internal.example', { SECUREALY_SUPABASE_HOST_OVERRIDE: '1' });
+    expect(overridden.calls).toHaveLength(1);
+    expect(overridden.r.checks[0]?.status).toBe('error'); // the fake answers 599
+  });
+});
+
+describe('vercel-env-hygiene fetches decrypted values only with SECUREALY_VERCEL_DECRYPT=1', () => {
+  const envs = [
+    { id: '1', key: 'RESEND_API_KEY', value: 're_FAKEabcd_FAKEabcdefghijklmnop\n', type: 'encrypted', target: ['production'] },
+    { id: '2', key: 'NEXT_PUBLIC_SITE_URL', value: 'https://app.example', type: 'plain', target: ['production', 'preview'] },
+  ];
+  const run = (extra: Record<string, string>) => {
+    const f = recordingFetch([{ match: '/env?decrypt=', status: 200, body: { envs } }]);
+    return runLocal({ cwd: materialize({}), checks: ['vercel-env-hygiene'], env: { VERCEL_TOKEN: 'FAKEvercelTokenFAKEvercelToken', VERCEL_PROJECT_ID: 'prj_FAKEproject', ...extra }, fetch: f }).then((r) => ({ r, calls: f.calls }));
+  };
+
+  it('without the variable it asks for metadata only and says which checks it skipped', async () => {
+    const { r, calls } = await run({});
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain('decrypt=false');
+    expect(r.checks[0]?.status).toBe('pass');
+    expect(r.checks[0]?.evidence).toContain('SECUREALY_VERCEL_DECRYPT');
+    expect(r.checks[0]?.evidence).toContain('skipped');
+  });
+
+  it('with the variable it reads values and catches the trailing newline', async () => {
+    const { r, calls } = await run({ SECUREALY_VERCEL_DECRYPT: '1' });
+    expect(calls[0]).toContain('decrypt=true');
+    expect(r.checks[0]?.status).toBe('fail');
+    expect(r.checks[0]?.evidence).toContain('newline');
+  });
+});

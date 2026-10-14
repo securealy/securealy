@@ -36,11 +36,14 @@ export const check: LocalCheckModule = {
     const team = teamId && teamId.startsWith('team_') ? `&teamId=${encodeURIComponent(teamId)}` : '';
     const headers = { authorization: `Bearer ${token}`, accept: 'application/json' };
     const url = (decrypt: boolean) => `https://api.vercel.com/v9/projects/${encodeURIComponent(projectId)}/env?decrypt=${decrypt}${team}`;
+    // Decrypted values are only requested when the owner opts in; the name and
+    // target checks need no values, and a listing with values is a listing of secrets.
+    const decryptWanted = ctx.env('SECUREALY_VERCEL_DECRYPT') === '1';
     let res: Response;
-    let decrypted = true;
+    let decrypted = decryptWanted;
     try {
-      res = await ctx.fetch(url(true), { headers });
-      if (res.status === 403) {
+      res = await ctx.fetch(url(decryptWanted), { headers });
+      if (decryptWanted && res.status === 403) {
         decrypted = false;
         res = await ctx.fetch(url(false), { headers });
       }
@@ -58,7 +61,7 @@ export const check: LocalCheckModule = {
     let newlineChecked = 0;
     for (const e of envs) {
       const targets = Array.isArray(e.target) ? e.target : e.target ? [e.target] : [];
-      const value = typeof e.value === 'string' && e.type !== 'sensitive' ? e.value : null;
+      const value = decrypted && typeof e.value === 'string' && e.type !== 'sensitive' ? e.value : null;
       if (PUBLIC_PREFIX.test(e.key)) {
         const byName = secretLikeName(e.key);
         const byValue = value ? findSecrets(value, e.key).some((f) => f.confidence === 'high') : false;
@@ -72,7 +75,12 @@ export const check: LocalCheckModule = {
       if (targets.length === 0) warns.push(`${e.key} has no target environment`);
     }
     const prodOnly = envs.filter((e) => Array.isArray(e.target) && e.target.includes('production') && !e.target.includes('preview')).length;
-    const notes = [`${envs.length} variables`, decrypted ? `${newlineChecked} values checked for trailing newlines` : 'values not readable with this token, newline check skipped', prodOnly ? `${prodOnly} production-only` : null].filter(Boolean);
+    const valueNote = decrypted
+      ? `${newlineChecked} values checked for trailing newlines and live keys outside production`
+      : decryptWanted
+        ? 'values not readable with this token; trailing-newline and live-key checks skipped'
+        : 'values not fetched; trailing-newline and live-key checks skipped (set SECUREALY_VERCEL_DECRYPT=1 to run them)';
+    const notes = [`${envs.length} variables`, valueNote, prodOnly ? `${prodOnly} production-only` : null].filter(Boolean);
     if (fails.length) return result(this.id, 'fail', `${fails.slice(0, 3).join('; ')}${fails.length > 3 ? `; ${fails.length - 3} more` : ''}`, [...fails, ...warns].join('\n'));
     if (warns.length) return result(this.id, 'warn', `${warns.slice(0, 3).join('; ')}; ${notes.join(', ')}`);
     return result(this.id, 'pass', notes.join(', '));

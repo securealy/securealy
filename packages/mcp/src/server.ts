@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { delimiter, resolve, sep } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
@@ -76,6 +76,25 @@ export function createServer(opts: ServerOptions = {}): McpServer {
   const redactor = new Redactor();
   redactor.learnEnv(env);
   const trusted = new Set<string>();
+  /**
+   * scan_repo may only read under the server's working directory, or under a
+   * folder listed in SECUREALY_SCAN_ROOTS (separated by the OS path delimiter).
+   * Both sides are compared by real path, so a symlink cannot point outside.
+   */
+  const scanRoots = (): string[] => {
+    const roots: string[] = [];
+    for (const r of [baseCwd, ...(env['SECUREALY_SCAN_ROOTS'] ?? '').split(delimiter)]) {
+      const t = r.trim();
+      if (!t) continue;
+      try {
+        roots.push(realpathSync(resolve(baseCwd, t)));
+      } catch {
+        /* a root that does not exist allows nothing */
+      }
+    }
+    return roots;
+  };
+  const contained = (abs: string): boolean => scanRoots().some((root) => abs === root || abs.startsWith(root.endsWith(sep) ? root : `${root}${sep}`));
 
   const ok = (text: string, structured?: Record<string, unknown>): CallToolResult => {
     const out: CallToolResult = { content: [{ type: 'text', text: redactor.text(text) }] };
@@ -167,7 +186,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
         'Runs entirely on this machine; nothing is sent anywhere. Findings show a six-character prefix of any secret, never the value. ' +
         'Folder trust: the first call for a path returns a confirmation request instead of results. Show the user the absolute path and call again with trust: true once they confirm it is their project. Trust lasts for this server process.',
       inputSchema: {
-        path: z.string().optional().describe('Folder to scan. Defaults to the server\'s working directory. Relative paths resolve against it.'),
+        path: z.string().optional().describe('Folder to scan. Defaults to the server\'s working directory. Relative paths resolve against it. Must be inside the working directory or a folder listed in SECUREALY_SCAN_ROOTS.'),
         trust: z.boolean().optional().describe('Set true on the second call to confirm the user trusts this folder being read, including its git history.'),
       },
       annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
@@ -178,6 +197,9 @@ export function createServer(opts: ServerOptions = {}): McpServer {
         abs = realpathSync(resolve(baseCwd, path ?? '.'));
       } catch {
         return fail(`scan_repo: no such folder: ${resolve(baseCwd, path ?? '.')}`);
+      }
+      if (!contained(abs)) {
+        return fail(`scan_repo: ${abs} is outside the server's working directory. Start the server in the project folder, or list an ancestor folder in SECUREALY_SCAN_ROOTS (several separated by "${delimiter}").`);
       }
       if (!trusted.has(abs)) {
         if (!trust) {

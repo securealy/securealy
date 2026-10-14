@@ -20,4 +20,5 @@ export type * from './types.js';
 export type { Evidence, HttpRecord, DnsEvidence, TlsEvidence, RdapEvidence, SupabaseEvidence, FirebaseEvidence, VerifiedEvidence } from './evidence.js';
 export type { CheckContext, CheckModule } from './checks/context.js';
 export type { LocalContext, LocalCheckModule } from './local/context.js';
+export { GIT_SAFETY_ARGS, supabaseUrlProblem } from './local/context.js';
 export type { SecretFinding, SecretKind } from './redact.js';

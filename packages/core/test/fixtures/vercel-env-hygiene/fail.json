@@ -1,7 +1,8 @@
 {
   "env": {
     "VERCEL_TOKEN": "FAKEvercelTokenFAKEvercelTokenFAKE",
-    "VERCEL_PROJECT_ID": "prj_FAKEproject"
+    "VERCEL_PROJECT_ID": "prj_FAKEproject",
+    "SECUREALY_VERCEL_DECRYPT": "1"
   },
   "responses": [
     {
@@ -9,8 +10,25 @@
       "status": 200,
       "body": {
         "envs": [
-          { "id": "1", "key": "NEXT_PUBLIC_STRIPE_SECRET_KEY", "value": "sk_live_FAKEFAKEFAKEFAKEFAKEFAKEFAKE", "type": "plain", "target": ["production"] },
-          { "id": "2", "key": "RESEND_API_KEY", "value": "re_FAKEabcd_FAKEabcdefghijklmnop\n", "type": "encrypted", "target": ["production", "preview"] }
+          {
+            "id": "1",
+            "key": "NEXT_PUBLIC_STRIPE_SECRET_KEY",
+            "value": "sk_live_FAKEFAKEFAKEFAKEFAKEFAKEFAKE",
+            "type": "plain",
+            "target": [
+              "production"
+            ]
+          },
+          {
+            "id": "2",
+            "key": "RESEND_API_KEY",
+            "value": "re_FAKEabcd_FAKEabcdefghijklmnop\n",
+            "type": "encrypted",
+            "target": [
+              "production",
+              "preview"
+            ]
+          }
         ]
       }
     }

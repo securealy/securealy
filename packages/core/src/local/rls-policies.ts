@@ -1,6 +1,6 @@
 import { result } from '../checks/context.js';
 import type { LocalCheckModule, LocalContext } from './context.js';
-import { supabaseRefFromUrl } from './context.js';
+import { supabaseRefFromUrl, supabaseUrlProblem } from './context.js';
 import type { CheckResult } from '../types.js';
 
 interface TableRow {
@@ -121,7 +121,11 @@ export const check: LocalCheckModule = {
     const service = ctx.envAny('SUPABASE_SERVICE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY');
     const anon = ctx.envAny('SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY', 'PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEY');
     if (mgmt && ref) return viaManagement(ctx, this.id, mgmt, ref);
-    if (url && service) return viaServiceKey(ctx, this.id, url, service, anon);
+    if (url && service) {
+      const problem = supabaseUrlProblem(url, ctx);
+      if (problem) return result(this.id, 'skip', `${problem}; the service key was not sent (set SECUREALY_SUPABASE_HOST_OVERRIDE=1 for a self-hosted project)`);
+      return viaServiceKey(ctx, this.id, url, service, anon);
+    }
     return result(this.id, 'skip', 'set SUPABASE_MGMT_TOKEN plus SUPABASE_PROJECT_REF (or SUPABASE_URL), or SUPABASE_URL plus SUPABASE_SERVICE_KEY');
   },
 };

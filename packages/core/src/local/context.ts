@@ -29,6 +29,18 @@ export interface LocalContext {
   requests: { count: number };
 }
 
+/**
+ * Every git invocation gets these in front of its own arguments: a scanned
+ * repository can set core.fsmonitor or core.hooksPath to a script in its own
+ * .git/config, and a read-only scan must never execute code from the target.
+ */
+export const GIT_SAFETY_ARGS = ['-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=/dev/null'] as const;
+const GIT_ENV = { GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0' } as const;
+
+function guardedArgs(cmd: string, args: string[]): string[] {
+  return cmd === 'git' ? [...GIT_SAFETY_ARGS, ...args] : args;
+}
+
 export interface LocalCheckModule {
   id: string;
   run(ctx: LocalContext): Promise<CheckResult>;
@@ -61,7 +73,7 @@ export function createLocalContext(cwd: string, env: Record<string, string | und
     requests,
     exec(cmd, args, opts = {}) {
       return new Promise((resolve) => {
-        execFile(cmd, args, { cwd, maxBuffer: opts.maxBuffer ?? 8_000_000, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }, (err, stdout, stderr) => {
+        execFile(cmd, guardedArgs(cmd, args), { cwd, maxBuffer: opts.maxBuffer ?? 8_000_000, env: { ...process.env, ...GIT_ENV } }, (err, stdout, stderr) => {
           const code = err && typeof (err as { code?: unknown }).code === 'number' ? ((err as { code: number }).code) : err ? 1 : 0;
           resolve({ code, stdout: String(stdout ?? ''), stderr: String(stderr ?? '') });
         });
@@ -69,7 +81,7 @@ export function createLocalContext(cwd: string, env: Record<string, string | und
     },
     stream(cmd, args, onLine, maxBytes) {
       return new Promise((resolve) => {
-        const child = spawn(cmd, args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }, stdio: ['ignore', 'pipe', 'ignore'] });
+        const child = spawn(cmd, guardedArgs(cmd, args), { cwd, env: { ...process.env, ...GIT_ENV }, stdio: ['ignore', 'pipe', 'ignore'] });
         let bytes = 0;
         let truncated = false;
         let rest = '';
@@ -118,6 +130,26 @@ export function supabaseRefFromUrl(url: string | undefined): string | null {
   if (!url) return null;
   const m = /^https?:\/\/([a-z0-9-]+)\.supabase\.(?:co|in|red)/i.exec(url.trim());
   return m?.[1] ?? null;
+}
+
+const SUPABASE_HOSTED = /\.supabase\.(?:co|in|red)$/i;
+
+/**
+ * Why a key must not be sent to this SUPABASE_URL, or null when it may be:
+ * only an https URL on a Supabase-hosted domain qualifies, unless the owner
+ * sets SECUREALY_SUPABASE_HOST_OVERRIDE=1 for a self-hosted project.
+ */
+export function supabaseUrlProblem(url: string, ctx: LocalContext): string | null {
+  if (ctx.env('SECUREALY_SUPABASE_HOST_OVERRIDE') === '1') return null;
+  let u: URL;
+  try {
+    u = new URL(url.trim());
+  } catch {
+    return 'SUPABASE_URL is not a URL';
+  }
+  if (u.protocol !== 'https:') return `SUPABASE_URL is ${u.protocol.replace(/:$/, '')}, not https`;
+  if (!SUPABASE_HOSTED.test(u.hostname)) return `SUPABASE_URL host ${u.hostname} is not a Supabase-hosted project`;
+  return null;
 }
 
 export function hostFromUrl(value: string | undefined): string | null {

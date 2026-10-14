@@ -1,8 +1,8 @@
 import { createServer as createHttpServer } from 'node:http';
 import type { Server as HttpServer } from 'node:http';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -219,6 +219,26 @@ describe('scan_repo', () => {
     const { client } = await connect();
     const r = await client.callTool({ name: 'scan_repo', arguments: { path: '/definitely/not/here/securealy' } });
     expect(r.isError).toBe(true);
+  });
+
+  it('refuses a folder outside the working directory, through a symlink too, unless SECUREALY_SCAN_ROOTS lists an ancestor', async () => {
+    const home = tmpDir();
+    const elsewhere = tmpDir();
+    symlinkSync(elsewhere, join(home, 'link-out'));
+    const { client } = await connect({ cwd: home });
+    for (const path of [elsewhere, join(home, 'link-out'), join(home, '..'), '../']) {
+      const r = await client.callTool({ name: 'scan_repo', arguments: { path, trust: true } });
+      expect(r.isError, path).toBe(true);
+      expect(text(r), path).toContain('SECUREALY_SCAN_ROOTS');
+    }
+    const inside = await client.callTool({ name: 'scan_repo', arguments: { path: '.' } });
+    expect(inside.isError).toBeFalsy();
+    const allowed = await connect({ cwd: home, env: { SECUREALY_SCAN_ROOTS: [tmpDir(), elsewhere].join(delimiter) } });
+    const r = await allowed.client.callTool({ name: 'scan_repo', arguments: { path: elsewhere } });
+    expect(r.isError).toBeFalsy();
+    expect((r.structuredContent as { trustRequired?: boolean }).trustRequired).toBe(true);
+    const still = await allowed.client.callTool({ name: 'scan_repo', arguments: { path: join(elsewhere, '..') } });
+    expect(still.isError).toBe(true);
   });
 });
 
