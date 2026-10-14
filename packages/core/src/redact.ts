@@ -143,3 +143,38 @@ export function secretLikeName(name: string): boolean {
     n,
   );
 }
+
+/** The password of a URL-shaped value (postgres://user:pass@host/db), whatever the variable is called. */
+export function urlPassword(value: string): string | null {
+  const v = value.trim();
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) return null;
+  try {
+    const pw = new URL(v).password;
+    return pw ? pw : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Every environment value that must never appear in output: the value of any
+ * secret-looking variable, plus the password of any value that is a URL with
+ * userinfo (DATABASE_URL, REDIS_URL), in both its raw and decoded forms.
+ */
+export function secretValuesFromEnv(env: Record<string, string | undefined>): string[] {
+  const out = new Set<string>();
+  for (const [name, value] of Object.entries(env)) {
+    if (typeof value !== 'string') continue;
+    if (secretLikeName(name)) out.add(value);
+    const pw = urlPassword(value);
+    if (pw) {
+      out.add(pw);
+      try {
+        out.add(decodeURIComponent(pw));
+      } catch {
+        /* not percent-encoded */
+      }
+    }
+  }
+  return [...out];
+}

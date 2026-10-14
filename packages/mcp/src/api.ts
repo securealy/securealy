@@ -1,7 +1,16 @@
+import { readTextCapped } from 'securealy-core';
 import type { GradeResult } from 'securealy-core';
 
 /** The only Securealy-specific constant in this repository. */
 export const API_BASE = 'https://securealy.com';
+/** No answer from securealy.com is read past this many bytes, before any parsing. */
+export const MAX_BODY_BYTES = 256 * 1024;
+
+async function body(res: Response): Promise<string> {
+  const r = await readTextCapped(res, MAX_BODY_BYTES);
+  if (r.truncated) throw new ApiError(res.status, `response larger than ${MAX_BODY_BYTES} bytes was not read`);
+  return r.text;
+}
 
 export interface ApiOptions {
   fetch: typeof fetch;
@@ -36,29 +45,35 @@ interface GradeResponse {
 export async function hostedGrade(url: string, token: string, api: ApiOptions): Promise<GradeResult> {
   const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json', 'user-agent': api.userAgent };
   const res = await api.fetch(`${API_BASE}/api/grade`, { method: 'POST', headers, body: JSON.stringify({ url, tier: 'verified' }) });
-  const text = await res.text();
+  const text = await body(res);
   if (!res.ok) throw new ApiError(res.status, text);
-  let body: GradeResponse;
+  let first: GradeResponse;
   try {
-    body = JSON.parse(text) as GradeResponse;
+    first = JSON.parse(text) as GradeResponse;
   } catch {
     throw new ApiError(res.status, `not JSON: ${text.slice(0, 120)}`);
   }
-  if (body.result) return body.result;
-  if (!body.id) throw new ApiError(res.status, body.error ?? 'no result and no job id in the response');
+  if (first.result) return first.result;
+  if (!first.id) throw new ApiError(res.status, first.error ?? 'no result and no job id in the response');
+  const id = first.id;
 
   const deadline = Date.now() + (api.pollTimeoutMs ?? 120_000);
   const interval = api.pollIntervalMs ?? 3_000;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, interval));
-    const poll = await api.fetch(`${API_BASE}/api/grade/${encodeURIComponent(body.id)}`, { headers: { authorization: headers.authorization, accept: 'application/json', 'user-agent': api.userAgent } });
-    const pollText = await poll.text();
+    const poll = await api.fetch(`${API_BASE}/api/grade/${encodeURIComponent(id)}`, { headers: { authorization: headers.authorization, accept: 'application/json', 'user-agent': api.userAgent } });
+    const pollText = await body(poll);
     if (!poll.ok) throw new ApiError(poll.status, pollText);
-    const parsed = JSON.parse(pollText) as GradeResponse | GradeResult;
+    let parsed: GradeResponse | GradeResult;
+    try {
+      parsed = JSON.parse(pollText) as GradeResponse | GradeResult;
+    } catch {
+      throw new ApiError(poll.status, `not JSON: ${pollText.slice(0, 120)}`);
+    }
     if ('schema' in parsed && parsed.schema === 1) return parsed;
     if ('result' in parsed && parsed.result) return parsed.result;
   }
-  throw new ApiError(504, `grade ${body.id} was still queued after ${Math.round((api.pollTimeoutMs ?? 120_000) / 1000)} s; fetch it later from ${API_BASE}/api/grade/${body.id}`);
+  throw new ApiError(504, `grade ${id} was still queued after ${Math.round((api.pollTimeoutMs ?? 120_000) / 1000)} s; fetch it later from ${API_BASE}/api/grade/${id}`);
 }
 
 export interface FixPayload {
@@ -72,7 +87,7 @@ export async function fetchFix(id: string, api: ApiOptions): Promise<FixPayload>
   try {
     const res = await api.fetch(`${API_BASE}/checks/${encodeURIComponent(id)}.json`, { headers: { accept: 'application/json', 'user-agent': api.userAgent } });
     if (!res.ok) return { found: false, status: res.status };
-    const text = await res.text();
+    const text = await body(res);
     try {
       return { found: true, status: res.status, body: JSON.parse(text) };
     } catch {
@@ -90,6 +105,6 @@ export async function postResult(result: GradeResult, token: string, api: ApiOpt
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json', 'user-agent': api.userAgent },
     body: JSON.stringify(result),
   });
-  const body = (await res.text()).slice(0, 2_000);
-  return { status: res.status, body };
+  const text = (await readTextCapped(res, 2_000)).text;
+  return { status: res.status, body: text };
 }

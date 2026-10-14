@@ -256,6 +256,16 @@ describe('redaction', () => {
     expect(red.value({ nested: { v: 'plainlookingtoken1234567890' } })).toEqual({ nested: { v: 'plainl…' } });
   });
 
+  it('Redactor learns the password inside a URL-shaped env value, whatever the variable is called', () => {
+    const red = new Redactor();
+    red.learnEnv({ DATABASE_URL: 'postgres://app:s3cretPassw0rd@db.example:5432/app', CACHE: 'redis://default:p%40ss%2Fword@cache.example:6379' });
+    const out = red.text('dsn postgres://app:s3cretPassw0rd@db.example:5432/app raw p%40ss%2Fword decoded p@ss/word');
+    expect(out).not.toContain('s3cretPassw0rd');
+    expect(out).not.toContain('p%40ss%2Fword');
+    expect(out).not.toContain('p@ss/word');
+    expect(out).toContain('db.example:5432/app');
+  });
+
   it('never echoes STRIPE_SECRET_KEY through check_stripe, even when the API echoes it back', async () => {
     const key = 'sk_test_' + 'b'.repeat(24);
     const { client } = await connect({ env: { STRIPE_SECRET_KEY: key }, fetch: routedFetch({ 'api.stripe.com': { status: 401, body: JSON.stringify({ error: { message: `Invalid API Key provided: ${key}` } }) } }) });
@@ -305,6 +315,21 @@ describe('catalogue tools', () => {
     const r2 = await hit.client.callTool({ name: 'fetch_fix', arguments: { id: 'csp' } });
     expect((r2.structuredContent as { fixAvailable: boolean }).fixAvailable).toBe(true);
     expect(text(r2)).toContain('Add a Content-Security-Policy header.');
+  });
+
+  it('never reads a securealy.com answer past 256 KiB, in any branch', async () => {
+    const huge = '{"fix":"' + 'x'.repeat(300 * 1024) + '"}';
+    const { client } = await connect({ fetch: routedFetch({ '/checks/hsts.json': { status: 200, body: huge }, '/api/grade': { status: 200, body: huge }, '/api/results': { status: 200, body: huge } }) });
+    const fix = await client.callTool({ name: 'fetch_fix', arguments: { id: 'hsts' } });
+    expect(fix.isError).toBeFalsy();
+    expect(text(fix)).toContain('not available');
+    expect(JSON.stringify(fix).length).toBeLessThan(10_000);
+    const graded = await client.callTool({ name: 'grade_url', arguments: { url: 'https://fixture.example', tier: 'verified', token: 'sly_x_1234567890' } });
+    expect(graded.isError).toBe(true);
+    expect(text(graded)).toContain('larger than');
+    expect(JSON.stringify(graded).length).toBeLessThan(10_000);
+    const posted = await client.callTool({ name: 'post_result', arguments: { result: { schema: 1, checks: [] }, token: 'sly_x_1234567890' } });
+    expect(JSON.stringify(posted).length).toBeLessThan(10_000);
   });
 
   it('post_result sends the Bearer token and reports the answer without echoing the token', async () => {

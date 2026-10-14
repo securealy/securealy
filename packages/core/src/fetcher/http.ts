@@ -107,6 +107,16 @@ async function readBody(res: Response, keepBytes: number): Promise<{ text: strin
   return { text, bytes, truncated, head };
 }
 
+/**
+ * Read a response body as text up to a byte limit, then stop reading. For
+ * callers that parse JSON from a service: a body past the limit is never
+ * held in memory or parsed, it is reported as truncated.
+ */
+export async function readTextCapped(res: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
+  const r = await readBody(res, maxBytes);
+  return { text: r.text, truncated: r.bytes > maxBytes };
+}
+
 function headerMap(h: Headers): { headers: Record<string, string>; setCookie: string[] } {
   const headers: Record<string, string> = {};
   const setCookie: string[] = [];

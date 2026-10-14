@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findSecrets, redactSecret, redactText, secretLikeName, buildContext, REMOTE_CHECKS, emptyEvidence, makeRecord } from '../src/index.js';
+import { findSecrets, redactSecret, redactText, secretLikeName, secretValuesFromEnv, urlPassword, buildContext, REMOTE_CHECKS, emptyEvidence, makeRecord } from '../src/index.js';
 
 const STRIPE = 'sk_live_' + 'FAKE0123456789abcdefghijklmnop';
 const OPENAI = 'sk-proj-' + 'FAKEabcdefghijklmnopqrstuvwxyz0123456789';
@@ -68,6 +68,21 @@ describe('redaction', () => {
     expect(secretLikeName('NEXT_PUBLIC_SUPABASE_ANON_KEY')).toBe(false);
     expect(secretLikeName('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY')).toBe(false);
     expect(secretLikeName('NEXT_PUBLIC_SITE_URL')).toBe(false);
+  });
+
+  it('learns the password inside any URL-shaped env value, whatever the variable is called', () => {
+    expect(urlPassword('postgres://app:s3cretPassw0rd@db.example:5432/app')).toBe('s3cretPassw0rd');
+    expect(urlPassword('redis://default:p%40ss%2Fword@cache.example:6379')).toBe('p%40ss%2Fword');
+    expect(urlPassword('https://app.example/')).toBeNull();
+    expect(urlPassword('https://user@app.example/')).toBeNull();
+    expect(urlPassword('just a value')).toBeNull();
+    const values = secretValuesFromEnv({ DATABASE_URL: 'postgres://app:s3cretPassw0rd@db.example:5432/app', CACHE: 'redis://default:p%40ss%2Fword@cache.example:6379', STRIPE_SECRET_KEY: 'sk_test_FAKE', NEXT_PUBLIC_SITE_URL: 'https://app.example', EMPTY: undefined });
+    expect(values).toContain('s3cretPassw0rd');
+    expect(values).toContain('p%40ss%2Fword');
+    expect(values).toContain('p@ss/word');
+    expect(values).toContain('sk_test_FAKE');
+    expect(values).not.toContain('https://app.example');
+    expect(values).not.toContain('postgres://app:s3cretPassw0rd@db.example:5432/app');
   });
 
   it('secrets-in-bundle evidence is redacted and names the file', () => {
