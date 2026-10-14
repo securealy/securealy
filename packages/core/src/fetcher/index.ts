@@ -238,9 +238,13 @@ async function gatherVerified(
     storage = await client.request(`https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(ev.firebase.storageBucket)}/o?maxResults=1`, { keepBytes: 0 });
     storageKind = 'firebase';
   }
+  // Burst only an endpoint that accepted the probe: a route answering 404, 405, 410 or 501 says nothing
+  // about rate limiting (a POST-only API answers 405 to every GET, limited or not). With no such route,
+  // burst the 404 path so a site-wide limiter still shows; the check reads the statuses and skips on 404/405.
+  const accepted = (s: number) => s > 0 && s !== 404 && s !== 405 && s !== 410 && s !== 501;
   const burstTarget =
-    routes.find((r) => /\/api\//.test(r.url) && r.record.status > 0)?.url ??
-    routes.find((r) => r.record.status > 0)?.url ??
+    routes.find((r) => /\/api\//.test(r.url) && accepted(r.record.status))?.url ??
+    routes.find((r) => accepted(r.record.status))?.url ??
     `${origin}${notFoundPath(ev.host)}`;
   const burstRecords = await Promise.all(Array.from({ length: 10 }, () => client.request(burstTarget, { keepBytes: 0 })));
   const statuses = burstRecords.map((r) => r.status);
