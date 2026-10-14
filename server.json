@@ -71,6 +71,27 @@
           "format": "string"
         },
         {
+          "name": "SECUREALY_VERCEL_DECRYPT",
+          "description": "Optional. Set to 1 to let check_vercel_env fetch decrypted variable values from api.vercel.com for the trailing-newline and live-key checks. Without it only names and targets are read and those checks are reported as skipped.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "SECUREALY_SUPABASE_HOST_OVERRIDE",
+          "description": "Optional. Set to 1 to let check_rls send the service key to a self-hosted Supabase URL. Without it the key is sent only to an https URL on a Supabase-hosted domain.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "SECUREALY_SCAN_ROOTS",
+          "description": "Optional. Folders, separated by the OS path delimiter, that scan_repo may read in addition to the server's working directory. Anything outside is refused.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
           "name": "SECUREALY_NO_HISTORY",
           "description": "Optional. Set to 1 to stop the server appending each run (grade, score, counts, failing check ids; never evidence) to .securealy/history.json in its working directory.",
           "isRequired": false,

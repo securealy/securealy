@@ -226,7 +226,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
       description:
         'Run rls-policies and supabase-auth-config against the user\'s own Supabase project using credentials already in this server\'s environment: SUPABASE_URL plus SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_ROLE_KEY), or SUPABASE_MGMT_TOKEN plus SUPABASE_PROJECT_REF. ' +
         'rls-policies lists tables in the public schema with row level security off or with permissive policies; supabase-auth-config reads the auth settings (open signup, email confirmation, OTP expiry). ' +
-        'Each value is trimmed, sent only to that Supabase project, and never appears in the output. If a variable is missing the check is skipped with a reason; tell the user which variable to export, never ask them to paste it into the chat.',
+        'Each value is trimmed, sent only to that Supabase project, and never appears in the output. The service key is sent only to an https URL on a Supabase-hosted domain (the project URL Supabase issued); any other SUPABASE_URL skips the check unless SECUREALY_SUPABASE_HOST_OVERRIDE=1 is set for a self-hosted project. If a variable is missing the check is skipped with a reason; tell the user which variable to export, never ask them to paste it into the chat.',
       inputSchema: {},
       annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
     },
@@ -268,7 +268,7 @@ export function createServer(opts: ServerOptions = {}): McpServer {
       title: 'Check Vercel environment hygiene',
       description:
         'Run vercel-env-hygiene with VERCEL_TOKEN (a project-scoped token is enough) and VERCEL_PROJECT_ID from this server\'s environment, or the project id passed here. Reports secret-looking variables exposed to the browser through a NEXT_PUBLIC_ or VITE_ prefix, test keys in production, and production values missing from preview. ' +
-        'The token is trimmed, sent only to api.vercel.com, and never appears in the output.',
+        'The token is trimmed, sent only to api.vercel.com, and never appears in the output. Variable values are fetched only when SECUREALY_VERCEL_DECRYPT=1 is set in the environment; without it the checks that need values (trailing newlines, live keys outside production) are reported as skipped and only names and targets are read.',
       inputSchema: {
         projectId: z.string().optional().describe('Vercel project id (prj_...). Falls back to VERCEL_PROJECT_ID or .vercel/project.json in the working directory.'),
       },

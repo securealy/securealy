@@ -89,7 +89,14 @@ describe('distribution layout', () => {
 
   it('nothing in the plugin or skill refers to another secret-bearing service by env name without disclosure', () => {
     const readme = read('plugin/README.md');
-    for (const v of ['SUPABASE_SERVICE_KEY', 'SUPABASE_MGMT_TOKEN', 'STRIPE_SECRET_KEY', 'VERCEL_TOKEN']) expect(readme).toContain(v);
+    const disclosed = [
+      'SUPABASE_SERVICE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'SUPABASE_MGMT_TOKEN', 'SUPABASE_ACCESS_TOKEN', 'SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEY',
+      'STRIPE_SECRET_KEY', 'VERCEL_TOKEN', 'VERCEL_TEAM_ID', 'VERCEL_ORG_ID', 'SECUREALY_SIGNUP', 'SECUREALY_VERCEL_DECRYPT', 'SECUREALY_SUPABASE_HOST_OVERRIDE', 'SECUREALY_SCAN_ROOTS', '.vercel/project.json',
+      'api.stripe.com', 'api.supabase.com', 'api.vercel.com', 'rdap.org', 'rdap.verisign.com', '1.1.1.1', '8.8.8.8',
+    ];
+    for (const v of disclosed) expect(readme, v).toContain(v);
+    for (const v of disclosed) expect(read('README.md'), v).toContain(v);
+    for (const v of ['SECUREALY_VERCEL_DECRYPT', 'SECUREALY_SUPABASE_HOST_OVERRIDE', 'SECUREALY_SCAN_ROOTS']) expect(read('server.json'), v).toContain(v);
     expect(readme.split(/\s+/).length).toBeGreaterThan(40);
   });
 });

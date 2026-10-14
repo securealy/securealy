@@ -93,7 +93,7 @@ The owner never publishes the `sly_` token itself. The published value is a fing
 
 ## Budgets
 
-Passive: at most 25 HTTP requests (redirect hops, the RDAP lookup, the single Supabase REST request and the one GET retry made when a HEAD answers 405 or 501 all count), 8 seconds per request, 3 redirects, 45 seconds overall. The verified tier gets 60 additional requests for its probes. `requests` in the result is the number actually made. `opts.maxRequests` and `opts.timeoutMs` override the defaults.
+Passive: at most 25 HTTP requests (redirect hops, the RDAP lookup, the single Supabase REST request and the one GET retry made when a HEAD answers 405 or 501 all count), 8 seconds per request, 3 redirects, 45 seconds overall. Every URL the engine fetches (the input, each redirect hop, every URL lifted from a page or bundle, and the TLS probe) must be http or https on a public address: `localhost`, `*.local`, `*.internal`, `*.home.arpa`, and any literal or resolved address in the loopback, link-local, RFC 1918, CGNAT, unique-local, multicast or reserved ranges (including the IPv6 forms that embed one) are refused without a request and without spending budget. The addresses that passed are the ones the socket connects to, so a record that changes between the check and the connect gains nothing. The verified tier gets 60 additional requests for its probes. `requests` in the result is the number actually made. `opts.maxRequests` and `opts.timeoutMs` override the defaults.
 
 ## Errors
 

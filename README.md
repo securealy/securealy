@@ -49,11 +49,11 @@ This repository is the open-source engine: the check catalogue, the grading libr
 npx securealy scan-repo            # secrets in git history, .gitignore coverage, .env.example parity
 npx securealy check-rls            # SUPABASE_MGMT_TOKEN + project ref, or SUPABASE_URL + SUPABASE_SERVICE_KEY
 npx securealy check-stripe         # STRIPE_SECRET_KEY (+ SECUREALY_PRODUCTION_URL to compare the webhook host)
-npx securealy check-vercel-env     # VERCEL_TOKEN + VERCEL_PROJECT_ID
+npx securealy check-vercel-env     # VERCEL_TOKEN + VERCEL_PROJECT_ID (+ SECUREALY_VERCEL_DECRYPT=1 to read values)
 npx securealy local                # all of the above
 ```
 
-Every environment variable is trimmed before use, sent only to the service it belongs to, and never printed. Evidence is redacted at the source: a found key shows as its first six characters and an ellipsis.
+Every environment variable is trimmed before use, sent only to the service it belongs to, and never printed. Evidence is redacted at the source: a found key shows as its first six characters and an ellipsis. The service key goes only to an https URL on a Supabase-hosted domain (`SECUREALY_SUPABASE_HOST_OVERRIDE=1` for a self-hosted project), and the Vercel check reads variable values only with `SECUREALY_VERCEL_DECRYPT=1`; without it the trailing-newline and live-key checks are reported as skipped. The full list of variables read and hosts contacted is under "What leaves your machine".
 
 ## The learning record
 
@@ -91,7 +91,7 @@ The published value is a fingerprint of your token, never the token. Then:
 npx securealy grade https://your-app.com --tier verified --token sly_...
 ```
 
-Vercel deployment protection? Pass `--bypass <protection bypass token>` and it is sent as the `x-vercel-protection-bypass` header on requests to your host only.
+Vercel deployment protection? Pass `--bypass <protection bypass token>` and it is sent as the `x-vercel-protection-bypass` header on requests to your host only. In CI, set `SECUREALY_TOKEN` and `SECUREALY_BYPASS` in the environment instead of the flags, so neither token appears on a command line.
 
 ## Opting out
 
@@ -110,7 +110,7 @@ claude plugin marketplace add securealy/securealy
 claude plugin install securealy@securealy
 ```
 
-The marketplace is published from this repository. When the repository moves to the `securealy` organization the command becomes `claude plugin marketplace add securealy/securealy`; installed plugins keep working.
+The marketplace is published from this repository.
 
 **Claude Code, server only:**
 
@@ -139,6 +139,10 @@ codex mcp add securealy -- npx -y securealy-mcp
 ### What leaves your machine
 
 The passive grade sends requests only to the URL being graded (what a browser would request, at most 25) plus DNS, TLS and RDAP lookups for its domain; nothing goes to Securealy. The verified grade sends the URL and your project token to securealy.com. `fetch_fix` sends a check id to securealy.com. `post_result` sends a result and your token to securealy.com, and only when you ask. The repository scan reads the folder you confirm and sends nothing. The Supabase, Stripe and Vercel checks read their credentials from your environment, send each one only to the service it belongs to, and never print them. The learning record (`.securealy/history.json`) stays on your machine.
+
+**Hosts contacted.** `grade`: the URL you give, the hosts it redirects to, and the same-site URLs found in the page (scripts, source maps, sitemap entries, links, images, `og:image`, the icon); the Supabase project URL found in a bundle and `firebasestorage.googleapis.com` when a Firebase bucket is named; your system DNS resolver, plus `1.1.1.1` and `8.8.8.8` for the DNSSEC query; `rdap.org` and, for `.com` and `.net`, `rdap.verisign.com`. Every one of those must be a public address: loopback, link-local, private, CGNAT, unique-local, multicast and reserved addresses, and the names that mean them, are refused on the input, on every redirect and on every URL found in a page. `check-rls`: `api.supabase.com` with a management token, or your Supabase project URL with the service key. `check-stripe`: `api.stripe.com`. `check-vercel-env`: `api.vercel.com`. `securealy.com`: the verified tier, `post`, `fetch_fix`, and telemetry when you turn it on.
+
+**Environment variables read.** `scan-repo`, `gitignore-env-coverage` and `env-example-parity`: none. `check-rls` and `supabase-auth-config`: `SUPABASE_MGMT_TOKEN`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `VITE_SUPABASE_URL`, `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `VITE_SUPABASE_ANON_KEY`, `PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_PUBLISHABLE_KEY`, `SECUREALY_SIGNUP`, `SECUREALY_SUPABASE_HOST_OVERRIDE`. `check-stripe`: `STRIPE_SECRET_KEY` and, for the production host, the first set of `SECUREALY_PRODUCTION_URL`, `PRODUCTION_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_URL`, `PUBLIC_SITE_URL`, `SITE_URL`, `APP_URL`, `VERCEL_PROJECT_PRODUCTION_URL` (the same list names the host in every local result). `check-vercel-env`: `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID`, `VERCEL_ORG_ID`, `SECUREALY_VERCEL_DECRYPT`, and `.vercel/project.json` in the folder for the project and team ids. `grade`: `SECUREALY_TOKEN`, `SECUREALY_BYPASS`. Every run: `SECUREALY_NO_HISTORY`, `SECUREALY_TELEMETRY`. The MCP server also reads `SECUREALY_SCAN_ROOTS`. The MCP server's redactor additionally learns the value of every variable whose name looks secret and the password inside any variable that is a URL (`DATABASE_URL` and friends) so that none of them can appear in an output.
 
 **Telemetry is off by default and is never prompted for.** If you set `SECUREALY_TELEMETRY=1`, each of the runs listed under the learning record also sends one POST to `https://securealy.com/api/telemetry` with exactly this and nothing else:
 

@@ -1,6 +1,6 @@
 # Publishing
 
-Every step here is run by the repository owner, in this order. Nothing in the repository holds a credential; each step authenticates on the owner's machine or through GitHub OIDC. Replace `securealy/securealy` with `securealy/securealy` after the repository moves to the organization (the README, `plugin.json`, `marketplace.json`, `server.json` and the four `package.json` files all carry it).
+Every step here is run by the repository owner, in this order. Nothing in the repository holds a credential; each step authenticates on the owner's machine or through GitHub OIDC.
 
 ## 0. Before the first release
 
@@ -105,7 +105,7 @@ To list it in the directory, open https://claude.ai/directory/manage from a Pro,
 
 | Field | Value |
 |---|---|
-| Repository | `securealy/securealy` (later `securealy/securealy`) |
+| Repository | `securealy/securealy` |
 | Plugin path | `plugin` |
 | Branch or tag | leave empty to follow `main`, or the release tag |
 
@@ -162,4 +162,4 @@ The Action is referenced by path and tag: `uses: securealy/securealy/packages/ac
 
 ## 9. Repository move
 
-After moving to the `securealy` organization: replace `securealy/securealy` everywhere (`grep -rn kennyhyder --exclude-dir=node_modules --exclude-dir=.git .`), update the trusted publisher entries on npm to the new organization, update the directory submission's repository (a new submission is needed; the old one can be delisted), and tell marketplace users to run `claude plugin marketplace add securealy/securealy`. The `com.securealy/mcp` registry name does not change because it is tied to the domain, not the repository.
+The repository lives in the `securealy` organization since 0.1.3 and every reference in the tree points there. If it ever moves again: replace the owner everywhere, update the trusted publisher entries on npm, resubmit the directory listing (the old one can be delisted), and tell marketplace users to run `claude plugin marketplace add <owner>/securealy`. The `com.securealy/mcp` registry name does not change because it is tied to the domain, not the repository.
