@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
-      - uses: kennyhyder/securealy/packages/action@v0.1.0
+      - uses: securealy/securealy/packages/action@v0.1.0
         with:
           url: ${{ inputs.url || github.event.deployment_status.target_url }}
           min-grade: B
@@ -34,7 +34,7 @@ jobs:
 For the verified tier, after proving ownership of the domain at securealy.com:
 
 ```yaml
-      - uses: kennyhyder/securealy/packages/action@v0.1.0
+      - uses: securealy/securealy/packages/action@v0.1.0
         with:
           url: https://your-app.com
           tier: verified

@@ -10,7 +10,7 @@ Grades a freshly launched web app the way an attacker and a customer would see i
 ## Install
 
 ```
-claude plugin marketplace add kennyhyder/securealy
+claude plugin marketplace add securealy/securealy
 claude plugin install securealy@securealy
 ```
 
@@ -33,4 +33,4 @@ Each `grade_url`, `scan_repo`, `check_rls`, `check_stripe` and `check_vercel_env
 
 Telemetry is off by default and never prompted for. With `SECUREALY_TELEMETRY=1` in the environment, each of those calls also sends one anonymous aggregate to `https://securealy.com/api/telemetry`: command, tier, grade, score, duration, request count, the pass/fail counts, the engine and Node versions, the detected stack kinds (hosting platform, builder, database, payments, framework) and the failing check ids. No URL, hostname, path, evidence, token or environment value. Fire and forget, three-second timeout, failures silent. The exact payload is documented in the repository README under "What leaves your machine".
 
-Source, catalogue and tests: https://github.com/kennyhyder/securealy. License: Apache-2.0.
+Source, catalogue and tests: https://github.com/securealy/securealy. License: Apache-2.0.

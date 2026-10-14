@@ -54,7 +54,7 @@ function readSpec(): string {
       /* try the next location */
     }
   }
-  return 'SPEC.md is not bundled with this build. Read it at https://github.com/kennyhyder/securealy/blob/main/SPEC.md';
+  return 'SPEC.md is not bundled with this build. Read it at https://github.com/securealy/securealy/blob/main/SPEC.md';
 }
 
 function checkPage(id: string): string {

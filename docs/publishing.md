@@ -1,6 +1,6 @@
 # Publishing
 
-Every step here is run by the repository owner, in this order. Nothing in the repository holds a credential; each step authenticates on the owner's machine or through GitHub OIDC. Replace `kennyhyder/securealy` with `securealy/securealy` after the repository moves to the organization (the README, `plugin.json`, `marketplace.json`, `server.json` and the four `package.json` files all carry it).
+Every step here is run by the repository owner, in this order. Nothing in the repository holds a credential; each step authenticates on the owner's machine or through GitHub OIDC. Replace `securealy/securealy` with `securealy/securealy` after the repository moves to the organization (the README, `plugin.json`, `marketplace.json`, `server.json` and the four `package.json` files all carry it).
 
 ## 0. Before the first release
 
@@ -27,7 +27,7 @@ Then, for each of the four packages (`securealy-checks`, `securealy-core`, `secu
 
 | Field | Value |
 |---|---|
-| Organization or user | `kennyhyder` (later `securealy`) |
+| Organization or user | `securealy` |
 | Repository | `securealy` |
 | Workflow filename | `release.yml` |
 | Environment name | `npm` |
@@ -97,7 +97,7 @@ The marketplace is already live once the repository is public:
 ```
 claude plugin validate ./plugin
 claude plugin validate .
-claude plugin marketplace add kennyhyder/securealy
+claude plugin marketplace add securealy/securealy
 claude plugin install securealy@securealy
 ```
 
@@ -105,7 +105,7 @@ To list it in the directory, open https://claude.ai/directory/manage from a Pro,
 
 | Field | Value |
 |---|---|
-| Repository | `kennyhyder/securealy` (later `securealy/securealy`) |
+| Repository | `securealy/securealy` (later `securealy/securealy`) |
 | Plugin path | `plugin` |
 | Branch or tag | leave empty to follow `main`, or the release tag |
 
@@ -158,8 +158,8 @@ Open https://glama.ai/mcp/servers and use **Add server** with the repository URL
 
 ## 8. GitHub Action
 
-The Action is referenced by path and tag: `uses: kennyhyder/securealy/packages/action@v0.1.0`. Each release tag makes a new version usable. To list it on the GitHub Marketplace the action must live at the root of its own repository, so that step is optional and needs a separate `securealy/action` repository that copies `packages/action`.
+The Action is referenced by path and tag: `uses: securealy/securealy/packages/action@v0.1.0`. Each release tag makes a new version usable. To list it on the GitHub Marketplace the action must live at the root of its own repository, so that step is optional and needs a separate `securealy/action` repository that copies `packages/action`.
 
 ## 9. Repository move
 
-After moving to the `securealy` organization: replace `kennyhyder/securealy` everywhere (`grep -rn kennyhyder --exclude-dir=node_modules --exclude-dir=.git .`), update the trusted publisher entries on npm to the new organization, update the directory submission's repository (a new submission is needed; the old one can be delisted), and tell marketplace users to run `claude plugin marketplace add securealy/securealy`. The `com.securealy/mcp` registry name does not change because it is tied to the domain, not the repository.
+After moving to the `securealy` organization: replace `securealy/securealy` everywhere (`grep -rn kennyhyder --exclude-dir=node_modules --exclude-dir=.git .`), update the trusted publisher entries on npm to the new organization, update the directory submission's repository (a new submission is needed; the old one can be delisted), and tell marketplace users to run `claude plugin marketplace add securealy/securealy`. The `com.securealy/mcp` registry name does not change because it is tied to the domain, not the repository.

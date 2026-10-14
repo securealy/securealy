@@ -6,7 +6,7 @@
   "version": "0.1.2",
   "websiteUrl": "https://securealy.com",
   "repository": {
-    "url": "https://github.com/kennyhyder/securealy",
+    "url": "https://github.com/securealy/securealy",
     "source": "github",
     "subfolder": "packages/mcp"
   },

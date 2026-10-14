@@ -106,7 +106,7 @@ The same checks are available to coding agents through the `securealy-mcp` serve
 **Claude Code plugin** (adds the `/securealy:launch-check` skill and the server):
 
 ```
-claude plugin marketplace add kennyhyder/securealy
+claude plugin marketplace add securealy/securealy
 claude plugin install securealy@securealy
 ```
 
@@ -134,7 +134,7 @@ codex mcp add securealy -- npx -y securealy-mcp
 
 **Any other MCP client:** run `npx -y securealy-mcp` over stdio. The server is listed in the MCP Registry as `com.securealy/mcp`.
 
-**Agent skills:** the `launch-check` skill in `skills/` follows the Agent Skills format, so `npx skills add kennyhyder/securealy` installs it into any compatible agent.
+**Agent skills:** the `launch-check` skill in `skills/` follows the Agent Skills format, so `npx skills add securealy/securealy` installs it into any compatible agent.
 
 ### What leaves your machine
 
@@ -169,7 +169,7 @@ steps:
   - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
     with:
       node-version: 22
-  - uses: kennyhyder/securealy/packages/action@v0.1.0
+  - uses: securealy/securealy/packages/action@v0.1.0
     with:
       url: https://your-app.vercel.app
       min-grade: B
