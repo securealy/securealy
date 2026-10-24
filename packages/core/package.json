@@ -30,6 +30,6 @@
   "dependencies": {
     "htmlparser2": "^10.0.0",
     "securealy-checks": "0.1.6",
-    "undici": "7.30.0"
+    "undici": "7.30.1"
   }
 }
